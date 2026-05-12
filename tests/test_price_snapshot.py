@@ -1,12 +1,54 @@
 import unittest
+import urllib.parse
 
 from scripts.fetch_price_snapshot import (
+    build_stooq_history_url,
+    build_stooq_quote_url,
+    default_providers_for_mode,
     fetch_price_snapshot,
+    history_range_days,
     summarize_nasdaq_quote,
     summarize_stooq_quote_csv,
     summarize_stooq_csv,
     yahoo_symbol_to_stooq,
 )
+
+
+class PriceModeUrlTest(unittest.TestCase):
+    def test_builds_stooq_quote_url(self):
+        url = build_stooq_quote_url("AAPL")
+        parsed = urllib.parse.urlparse(url)
+        params = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+
+        self.assertEqual(parsed.path, "/q/l/")
+        self.assertEqual(params["s"], ["aapl.us"])
+        self.assertEqual(params["f"], ["sd2t2ohlcv"])
+        self.assertEqual(params["h"], [""])
+        self.assertEqual(params["e"], ["csv"])
+
+    def test_builds_stooq_history_url(self):
+        url = build_stooq_history_url("AAPL", start="2025-05-12", end="2026-05-12")
+        parsed = urllib.parse.urlparse(url)
+        params = urllib.parse.parse_qs(parsed.query)
+
+        self.assertEqual(parsed.path, "/q/d/l/")
+        self.assertEqual(params["s"], ["aapl.us"])
+        self.assertEqual(params["i"], ["d"])
+        self.assertEqual(params["d1"], ["20250512"])
+        self.assertEqual(params["d2"], ["20260512"])
+
+    def test_converts_history_ranges_to_days(self):
+        self.assertEqual(history_range_days("1y"), 365)
+        self.assertEqual(history_range_days("6mo"), 180)
+        self.assertEqual(history_range_days("30d"), 30)
+
+    def test_rejects_unsupported_history_range(self):
+        with self.assertRaisesRegex(ValueError, "unsupported history range: max"):
+            history_range_days("max")
+
+    def test_default_providers_for_mode(self):
+        self.assertEqual(default_providers_for_mode("quote"), ["stooq", "nasdaq", "yahoo"])
+        self.assertEqual(default_providers_for_mode("history"), ["stooq_history", "yahoo"])
 
 
 class PriceSnapshotTest(unittest.TestCase):
@@ -114,6 +156,18 @@ class PriceSnapshotTest(unittest.TestCase):
         self.assertEqual(yahoo_symbol_to_stooq("AAPL"), "aapl.us")
         self.assertEqual(yahoo_symbol_to_stooq("BRK-B"), "brk-b.us")
         self.assertEqual(yahoo_symbol_to_stooq("005930.KS"), "005930.ks")
+
+    def test_uses_stooq_history_provider_when_selected(self):
+        calls = []
+
+        def fake_stooq_history(symbol, range_, interval):
+            calls.append("stooq_history")
+            return {"summary": {"source": "stooq_csv"}, "raw": "csv"}
+
+        result = fetch_price_snapshot("AAPL", providers=["stooq_history"], stooq_history_fetcher=fake_stooq_history)
+
+        self.assertEqual(result["summary"]["source"], "stooq_csv")
+        self.assertEqual(calls, ["stooq_history"])
 
 
 if __name__ == "__main__":

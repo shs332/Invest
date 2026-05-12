@@ -6,9 +6,23 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from scripts.invest_utils import now_kst_iso, parse_amount, read_json, safe_symbol, write_json
+    from scripts.invest_utils import (
+        now_kst_date,
+        now_kst_iso,
+        parse_amount,
+        read_json,
+        safe_symbol,
+        write_json,
+    )
 except ModuleNotFoundError:
-    from invest_utils import now_kst_iso, parse_amount, read_json, safe_symbol, write_json
+    from invest_utils import (
+        now_kst_date,
+        now_kst_iso,
+        parse_amount,
+        read_json,
+        safe_symbol,
+        write_json,
+    )
 
 
 SEC_CONCEPTS = {
@@ -148,7 +162,25 @@ def normalize_dart_financials(raw: dict[str, Any], ticker: str, market: str = "K
     }
 
 
-def normalize_file(source: str, ticker: str, input_path: str | Path, output_dir: str | Path) -> Path:
+def normalized_output_path(
+    ticker: str,
+    source: str,
+    output_dir: str | Path,
+    date_text: str | None = None,
+) -> Path:
+    symbol = safe_symbol(ticker)
+    if date_text:
+        return Path(output_dir) / f"{symbol}_{date_text}_{source}_normalized.json"
+    return Path(output_dir) / f"{symbol}_{source}_normalized.json"
+
+
+def normalize_file(
+    source: str,
+    ticker: str,
+    input_path: str | Path,
+    output_dir: str | Path,
+    dated: bool = False,
+) -> Path:
     raw = read_json(input_path)
     if source == "sec":
         result = normalize_sec_companyfacts(raw, ticker)
@@ -156,7 +188,12 @@ def normalize_file(source: str, ticker: str, input_path: str | Path, output_dir:
         result = normalize_dart_financials(raw, ticker)
     else:
         raise ValueError(f"unknown source: {source}")
-    output = Path(output_dir) / f"{safe_symbol(ticker)}_{source}_normalized.json"
+    output = normalized_output_path(
+        ticker,
+        source,
+        output_dir,
+        now_kst_date() if dated else None,
+    )
     return write_json(output, result)
 
 
@@ -166,8 +203,19 @@ def main() -> None:
     parser.add_argument("--ticker", required=True)
     parser.add_argument("--input", required=True)
     parser.add_argument("--output-dir", default="data/normalized")
+    parser.add_argument(
+        "--dated",
+        action="store_true",
+        help="Write date-stamped normalized output for reproducible bundles.",
+    )
     args = parser.parse_args()
-    output = normalize_file(args.source, args.ticker, args.input, args.output_dir)
+    output = normalize_file(
+        args.source,
+        args.ticker,
+        args.input,
+        args.output_dir,
+        dated=args.dated,
+    )
     print(output)
 
 

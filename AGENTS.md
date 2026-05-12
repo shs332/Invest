@@ -7,3 +7,4 @@
 - Keep analysis centered on survival first: loss control, bubble avoidance, cash as a valid position, no leverage by default, and no averaging down unless the original thesis still holds.
 - Prefer the local `uv run python scripts/...` pipeline before ad hoc analysis when a relevant fetch/normalize script exists.
 - Store raw fetched data under `data/raw/`, normalized financial data under `data/normalized/`, generated analysis bundles under `data/reports/`, and final human-readable investment notes under `memos/`.
+- Keep generated raw/cache/report payloads local by default; commit final investment notes under `memos/` unless a specific raw artifact is needed for review.

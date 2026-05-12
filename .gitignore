@@ -22,3 +22,9 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+# Generated investment data; final human-readable notes live in memos/
+data/cache/*.json
+data/raw/**/*.json
+data/raw/**/*.json.gz
+data/reports/*.md

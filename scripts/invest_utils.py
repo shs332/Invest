@@ -28,15 +28,23 @@ def safe_symbol(symbol: str) -> str:
 
 
 def read_json(path: str | Path) -> Any:
-    with Path(path).open("r", encoding="utf-8") as f:
+    input_path = Path(path)
+    opener = gzip.open if input_path.suffix == ".gz" else open
+    with opener(input_path, "rt", encoding="utf-8") as f:
         return json.load(f)
 
 
-def write_json(path: str | Path, data: Any) -> Path:
+def write_json(path: str | Path, data: Any, compact: bool = False) -> Path:
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
-    with output.open("w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2, sort_keys=True)
+    opener = gzip.open if output.suffix == ".gz" else open
+    kwargs = {"ensure_ascii": False, "sort_keys": True}
+    if compact:
+        kwargs["separators"] = (",", ":")
+    else:
+        kwargs["indent"] = 2
+    with opener(output, "wt", encoding="utf-8") as f:
+        json.dump(data, f, **kwargs)
         f.write("\n")
     return output
 
