@@ -1,0 +1,7 @@
+# Add current holdings only if you want position-aware reviews.
+# Example:
+# - ticker: 005930.KS
+#   market: KR
+#   weight_pct: 5
+#   avg_price: null
+[]

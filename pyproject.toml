@@ -1,0 +1,10 @@
+[project]
+name = "invest-workspace"
+version = "0.1.0"
+description = "Project-local investment research data pipeline."
+requires-python = ">=3.9"
+dependencies = []
+
+[tool.uv]
+package = false
+

@@ -1,0 +1,8 @@
+# Add companies you want to revisit.
+# Example:
+# - ticker: AAPL
+#   market: US
+#   name: Apple Inc.
+#   reason: cash flow quality and valuation watch
+#   status: watch
+[]
