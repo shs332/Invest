@@ -1,0 +1,9 @@
+- Start each session with `caveman:caveman` when available.
+- This workspace is for periodic, user-initiated stock/company analysis, not automated trading.
+- Treat outputs as evidence-based decision support, not guaranteed investment advice.
+- For stock, ETF, company, price-move, earnings, or valuation questions, verify recent data with web research before giving a current judgment.
+- Prefer primary sources first: SEC filings, DART filings, IR reports, earnings releases, exchange data, central bank data. Use news only as context after checking primary facts.
+- Always state the base date in Seoul time for current market data.
+- Keep analysis centered on survival first: loss control, bubble avoidance, cash as a valid position, no leverage by default, and no averaging down unless the original thesis still holds.
+- Prefer the local `uv run python scripts/...` pipeline before ad hoc analysis when a relevant fetch/normalize script exists.
+- Store raw fetched data under `data/raw/`, normalized financial data under `data/normalized/`, generated analysis bundles under `data/reports/`, and final human-readable investment notes under `memos/`.

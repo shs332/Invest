@@ -1,0 +1,30 @@
+{
+  "_fetch": {
+    "attempts": [
+      {
+        "provider": "stooq",
+        "status": "ok"
+      }
+    ],
+    "interval": "1d",
+    "provider": "stooq",
+    "range": "1y",
+    "source_url": "https://stooq.com/q/l/?s=msft.us&f=sd2t2ohlcv&h=&e=csv",
+    "stooq_symbol": "msft.us",
+    "symbol": "MSFT"
+  },
+  "raw": "Symbol,Date,Time,Open,High,Low,Close,Volume\r\nMSFT.US,2026-05-11,22:00:19,407.785,412.69,405.5,412.69,35609478\r\n",
+  "summary": {
+    "currency": null,
+    "exchange": "stooq",
+    "latest_close": 412.69,
+    "latest_volume": 35609478,
+    "max_close": 412.69,
+    "min_close": 405.5,
+    "period_return_pct": null,
+    "points": 1,
+    "regular_market_price": 412.69,
+    "source": "stooq_quote_csv",
+    "symbol": "MSFT"
+  }
+}

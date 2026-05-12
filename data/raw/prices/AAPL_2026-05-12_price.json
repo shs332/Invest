@@ -1,0 +1,30 @@
+{
+  "_fetch": {
+    "attempts": [
+      {
+        "provider": "stooq",
+        "status": "ok"
+      }
+    ],
+    "interval": "1d",
+    "provider": "stooq",
+    "range": "1y",
+    "source_url": "https://stooq.com/q/l/?s=aapl.us&f=sd2t2ohlcv&h=&e=csv",
+    "stooq_symbol": "aapl.us",
+    "symbol": "AAPL"
+  },
+  "raw": "Symbol,Date,Time,Open,High,Low,Close,Volume\r\nAAPL.US,2026-05-11,22:00:19,291.979,293.88,290.23,292.68,41166897\r\n",
+  "summary": {
+    "currency": null,
+    "exchange": "stooq",
+    "latest_close": 292.68,
+    "latest_volume": 41166897,
+    "max_close": 293.88,
+    "min_close": 290.23,
+    "period_return_pct": null,
+    "points": 1,
+    "regular_market_price": 292.68,
+    "source": "stooq_quote_csv",
+    "symbol": "AAPL"
+  }
+}
