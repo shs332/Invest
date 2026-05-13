@@ -28,3 +28,6 @@ data/cache/*.json
 data/raw/**/*.json
 data/raw/**/*.json.gz
 data/reports/*.md
+
+# External skills
+skills/us-stock-analysis/

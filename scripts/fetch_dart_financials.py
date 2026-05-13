@@ -7,9 +7,9 @@ from datetime import datetime
 from pathlib import Path
 
 try:
-    from scripts.invest_utils import http_json, now_kst_date, safe_symbol, write_json
+    from scripts.invest_utils import http_json, load_project_env, now_kst_date, safe_symbol, write_json
 except ModuleNotFoundError:
-    from invest_utils import http_json, now_kst_date, safe_symbol, write_json
+    from invest_utils import http_json, load_project_env, now_kst_date, safe_symbol, write_json
 
 
 DART_FINANCIALS_URL = "https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json"
@@ -54,6 +54,7 @@ def main() -> None:
     parser.add_argument("--fs-div", default="CFS", choices=["CFS", "OFS"])
     parser.add_argument("--out-dir", default="data/raw/dart")
     args = parser.parse_args()
+    load_project_env()
     data = fetch_dart_financials(args.corp_code, args.year, args.report_code, args.fs_div)
     label = args.ticker or args.corp_code
     output = Path(args.out_dir) / f"{safe_symbol(label)}_{args.year}_{args.report_code}_{now_kst_date()}_dart.json"

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import zipfile
 import gzip
@@ -13,6 +14,8 @@ from zoneinfo import ZoneInfo
 
 
 KST = ZoneInfo("Asia/Seoul")
+ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def now_kst_date() -> str:
@@ -25,6 +28,66 @@ def now_kst_iso() -> str:
 
 def safe_symbol(symbol: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "_", symbol.strip())
+
+
+def _strip_env_comment(value: str) -> str:
+    quote: str | None = None
+    escaped = False
+    for index, char in enumerate(value):
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if char in {"'", '"'}:
+            quote = None if quote == char else char if quote is None else quote
+            continue
+        if char == "#" and quote is None and (index == 0 or value[index - 1].isspace()):
+            return value[:index].rstrip()
+    return value.strip()
+
+
+def _parse_env_value(value: str) -> str:
+    stripped = _strip_env_comment(value)
+    if len(stripped) >= 2 and stripped[0] == stripped[-1] and stripped[0] in {"'", '"'}:
+        quote = stripped[0]
+        stripped = stripped[1:-1]
+        if quote == '"':
+            return (
+                stripped
+                .replace(r"\n", "\n")
+                .replace(r"\r", "\r")
+                .replace(r"\t", "\t")
+                .replace(r'\"', '"')
+                .replace(r"\\", "\\")
+            )
+    return stripped
+
+
+def load_project_env(path: str | Path | None = None, override: bool = False) -> dict[str, str]:
+    env_path = Path(path) if path is not None else PROJECT_ROOT / ".env"
+    if not env_path.exists():
+        return {}
+
+    loaded: dict[str, str] = {}
+    for line_number, raw_line in enumerate(env_path.read_text(encoding="utf-8").splitlines(), start=1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export "):].lstrip()
+        if "=" not in line:
+            raise ValueError(f"invalid env line {line_number} in {env_path}: missing '='")
+        name, value = line.split("=", 1)
+        name = name.strip()
+        if not ENV_NAME_RE.match(name):
+            raise ValueError(f"invalid env name on line {line_number} in {env_path}: {name}")
+        if override or name not in os.environ:
+            parsed = _parse_env_value(value)
+            os.environ[name] = parsed
+            loaded[name] = parsed
+    return loaded
 
 
 def read_json(path: str | Path) -> Any:

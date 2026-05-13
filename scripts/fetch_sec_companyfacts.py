@@ -6,10 +6,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 try:
-    from scripts.invest_utils import http_json, now_kst_date, safe_symbol, write_json
+    from scripts.invest_utils import http_json, load_project_env, now_kst_date, safe_symbol, write_json
     from scripts.resolve_company import resolve_company
 except ModuleNotFoundError:
-    from invest_utils import http_json, now_kst_date, safe_symbol, write_json
+    from invest_utils import http_json, load_project_env, now_kst_date, safe_symbol, write_json
     from resolve_company import resolve_company
 
 
@@ -74,6 +74,7 @@ def main() -> None:
     parser.add_argument("--stale-days", type=int, default=7, help="Reuse latest local raw file if this fresh. Use -1 to force stale.")
     parser.add_argument("--refresh", action="store_true", help="Always fetch even if a fresh local raw file exists.")
     args = parser.parse_args()
+    load_project_env()
     out_dir = Path(args.out_dir)
     existing = latest_companyfacts_file(args.ticker, out_dir)
     if should_reuse_companyfacts(existing, args.refresh, args.cik, args.stale_days):
