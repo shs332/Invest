@@ -5,7 +5,7 @@ description: Use when the user asks whether a stock or ETF is worth buying, hold
 
 # Risk-Manager Investment Memo
 
-Purpose: turn evidence into disciplined decision support. Survival first; no return guarantees.
+Purpose: turn evidence into disciplined risk/reward decision support. No return guarantees.
 
 ## Default Assumptions
 

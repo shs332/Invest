@@ -17,7 +17,7 @@ Use this workflow for generic US stock judgment, company analysis, valuation, pe
 
 If the user explicitly asks for upside, growth, momentum, alpha, aggressive opportunity, rerating, or catalyst-driven buying, call `us-stock-return-opportunity` after local evidence and primary-source checks.
 
-Risk-first verdict controls the final action label. The return-seeking view can raise interest level, but it cannot remove invalidation triggers, position sizing, or downside controls.
+Risk-management verdict controls the final action label. The return-seeking view can raise interest level, but it cannot remove invalidation triggers, position sizing, or downside controls.
 
 ## Priority Order
 
@@ -49,7 +49,7 @@ Risk-first verdict controls the final action label. The return-seeking view can 
 - News, analyst targets, technical indicators, and Yahoo-style metrics are context, not proof.
 - Do not let the external skill's `Buy/Hold/Sell`, target price, or conviction wording override this project's conditional labels.
 - Use only these action labels: `Buy`, `Watch`, `Hold`, `Trim`, `Avoid`, `Increase Cash`.
-- Keep survival first: loss control, no leverage by default, cash as a valid position, no averaging down unless thesis, cash flow, balance sheet, and valuation still support it.
+- Keep analysis risk-aware: downside control, no leverage by default, cash as a valid position, no averaging down unless thesis, cash flow, balance sheet, and valuation still support it.
 - If local or primary data is missing, mark the answer incomplete instead of filling gaps with guesses.
 
 ## Output

@@ -19,6 +19,15 @@ Use this skill when the user explicitly asks for:
 
 If the user asks a generic buy/hold/avoid question, use `us-stock-decision-workflow` first.
 
+## Reference Loading
+
+- For any return-seeking analysis, read `references/upside-scorecard.md` and `references/risk-gates.md`.
+- If the request mentions catalyst, earnings, product cycle, guidance, rerating, or timing, also read `references/catalyst-checklist.md`.
+- If valuation multiple expansion or peer discount is central, read `references/valuation-rerating.md`.
+- If entry timing, momentum, breakout, drawdown recovery, or technical setup matters, read `references/momentum-technical-check.md`.
+- Use `references/output-template.md` for full memo output unless the user asks for a short answer.
+- Treat external `us-stock-analysis` as a supplemental idea source only; do not require a local copy of that skill.
+
 ## Workflow
 
 1. State base date in Seoul time.
@@ -37,20 +46,14 @@ If the user asks a generic buy/hold/avoid question, use `us-stock-decision-workf
    - valuation ratio coverage;
    - technical levels;
    - catalyst and bull/bear report structure.
-6. Score upside only after financial quality is checked:
-   - revenue growth and durability;
-   - margin expansion potential;
-   - free cash flow conversion;
-   - balance sheet capacity;
-   - valuation rerating path;
-   - catalyst timing;
-   - relative strength and technical setup.
-7. Send final action through `risk-manager-investment-memo`.
+6. Score upside only after financial quality is checked, using `references/upside-scorecard.md`.
+7. Apply hard risk gates from `references/risk-gates.md`.
+8. Send final action through `risk-manager-investment-memo`.
 
 ## Rules
 
 - Do not override project labels with external `us-stock-analysis` labels.
-- Do not override project labels, source hierarchy, or survival-first constraints.
+- Do not override project labels, source hierarchy, or risk controls.
 - Do not use target price or analyst rating as proof.
 - Do not recommend leverage by default.
 - Do not average down unless thesis, cash flow, balance sheet, and valuation still support it.
@@ -59,44 +62,12 @@ If the user asks a generic buy/hold/avoid question, use `us-stock-decision-workf
 
 ## Output
 
+Use `references/output-template.md` for full memo output. Minimum output:
+
 ```markdown
 ## Opportunity Verdict
 - Return-seeking view:
-- Risk-first final label:
+- Risk-management final label:
 - Main upside driver:
 - Main invalidation trigger:
-
-## Evidence Base
-- Base date:
-- Local artifacts:
-- Primary sources:
-- Missing data:
-
-## Upside Case
-- Growth driver:
-- Margin/FCF driver:
-- Rerating driver:
-- Catalyst:
-- Technical setup:
-
-## Risk Gate
-- Financial quality:
-- Balance sheet:
-- Valuation heat:
-- Bubble/narrative risk:
-- Downside scenario:
-
-## Supplemental Checklist From `us-stock-analysis`
-- Peer comparison:
-- Valuation ratio coverage:
-- Technical level:
-- Bull/bear structure:
-- What changed after supplemental check:
-
-## Execution Rules
-- New entry:
-- Current holding:
-- Position sizing:
-- Trim rule:
-- Exit rule:
 ```
