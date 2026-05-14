@@ -5,7 +5,7 @@ description: Use when the user asks for Korean listed stock analysis, DART finan
 
 # Korean Stock Analysis Review
 
-Purpose: adapt the US stock analysis workflow to Korean listed companies while preserving this workspace's survival-first investment rules.
+Purpose: adapt the US stock analysis workflow to Korean listed companies while preserving this workspace's risk-aware investment rules.
 
 ## When To Use
 
