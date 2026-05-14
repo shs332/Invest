@@ -13,6 +13,10 @@ __pycache__/
 .env
 .env.*
 .codex/
+.agents/*
+!.agents/skills/
+!.agents/skills/**
+.agents/skills/us-stock-analysis/
 
 # Test/build caches
 .pytest_cache/
@@ -23,11 +27,15 @@ dist/
 build/
 *.egg-info/
 
-# Generated investment data; final human-readable notes live in memos/
-data/cache/*.json
-data/raw/**/*.json
-data/raw/**/*.json.gz
-data/reports/*.md
+# Generated investment data; keep only directory placeholders in git
+data/cache/**
+data/raw/**
+data/normalized/**
+data/reports/**
+!data/cache/.gitkeep
+!data/raw/.gitkeep
+!data/normalized/.gitkeep
+!data/reports/.gitkeep
 
 # External skills
 skills/us-stock-analysis/

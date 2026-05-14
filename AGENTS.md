@@ -6,7 +6,8 @@
 - Always state the base date in Seoul time for current market data.
 - Keep analysis centered on survival first: loss control, bubble avoidance, cash as a valid position, no leverage by default, and no averaging down unless the original thesis still holds.
 - Prefer the local `uv run python scripts/...` pipeline before ad hoc analysis when a relevant fetch/normalize script exists.
-- For US stock judgment, use project-owned `us-stock-decision-workflow` first; treat external `skills/us-stock-analysis/` only as a supplemental checklist.
+- For US stock judgment, use project-owned `us-stock-decision-workflow` first; treat external `us-stock-analysis` only as a supplemental checklist.
 - For Korean stock judgment, use `kr-stock-analysis-review`; do not force US-market assumptions onto DART/KRX analysis.
+- Keep project-only skills under `.agents/skills/`; external reusable skills should come from `npx skills` global installs.
 - Store raw fetched data under `data/raw/`, normalized financial data under `data/normalized/`, generated analysis bundles under `data/reports/`, and final human-readable investment notes under `memos/`.
 - Keep generated raw/cache/report payloads local by default; commit final investment notes under `memos/` unless a specific raw artifact is needed for review.

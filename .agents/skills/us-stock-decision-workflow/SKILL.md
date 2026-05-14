@@ -22,7 +22,7 @@ Purpose: make the project-local evidence pipeline the primary engine for US stoc
    - `financial-statement-review` for financial quality.
    - `market-move-explainer` for recent move cause.
    - `risk-manager-investment-memo` for final action label and execution rules.
-5. Use `skills/us-stock-analysis/` only after the above, as a completeness checklist for:
+5. Use external `us-stock-analysis` only after the above, as a completeness checklist for:
    - peer comparison;
    - valuation ratio coverage;
    - technical levels;
