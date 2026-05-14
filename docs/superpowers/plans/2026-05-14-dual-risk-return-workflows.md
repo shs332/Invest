@@ -1,6 +1,6 @@
 # Dual Risk And Return Workflows Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Let this repo run two explicit US stock analysis modes: survival-first risk minimization by default, and return-seeking opportunity analysis when the user asks for upside, growth, momentum, or aggressive opportunity review.
 
@@ -58,7 +58,7 @@ Not merged: ETF resolver/profile/holdings/bundle tasks, because they are a separ
 - Create: `.agents/skills/us-stock-return-opportunity/SKILL.md`
 - Test: `tests/test_skill_routing_policy.py`
 
-- [ ] **Step 1: Create policy test for new skill**
+- [x] **Step 1: Create policy test for new skill**
 
 Create `tests/test_skill_routing_policy.py`:
 
@@ -91,18 +91,11 @@ class SkillRoutingPolicyTest(unittest.TestCase):
         self.assertIn("use `us-stock-return-opportunity`", text)
         self.assertIn("Risk-first verdict controls the final action label", text)
 
-    def test_config_enables_return_opportunity_skill(self):
-        text = self.read(".codex/config.toml")
-
-        self.assertIn('path = ".agents/skills/us-stock-return-opportunity"', text)
-        self.assertIn("enabled = true", text)
-
-
 if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 Run:
 
@@ -112,7 +105,7 @@ uv run python -m unittest tests.test_skill_routing_policy -v
 
 Expected: fail because `.agents/skills/us-stock-return-opportunity/SKILL.md` does not exist and routing text is not yet present.
 
-- [ ] **Step 3: Add return-opportunity skill**
+- [x] **Step 3: Add return-opportunity skill**
 
 Create `.agents/skills/us-stock-return-opportunity/SKILL.md`:
 
@@ -218,7 +211,7 @@ If the user asks a generic buy/hold/avoid question, use `us-stock-decision-workf
 ```
 ````
 
-- [ ] **Step 4: Run policy test**
+- [x] **Step 4: Run policy test**
 
 Run:
 
@@ -235,7 +228,7 @@ Expected: still fails because `AGENTS.md` and `.codex/config.toml` are not updat
 - Modify: `AGENTS.md`
 - Test: `tests/test_skill_routing_policy.py`
 
-- [ ] **Step 1: Register project skill**
+- [x] **Step 1: Register project skill**
 
 Append to `.codex/config.toml`:
 
@@ -246,7 +239,9 @@ path = ".agents/skills/us-stock-return-opportunity"
 enabled = true
 ```
 
-- [ ] **Step 2: Add `AGENTS.md` routing policy**
+Execution note: `.codex/` is ignored as machine-local config in this repo. The local config was updated and discoverability was verified, but `.codex/config.toml` should not be force-added to the PR.
+
+- [x] **Step 2: Add `AGENTS.md` routing policy**
 
 Append these lines after the existing US stock judgment rule in `AGENTS.md`:
 
@@ -257,7 +252,7 @@ Append these lines after the existing US stock judgment rule in `AGENTS.md`:
 - External `us-stock-analysis` remains a supplemental checklist only; it must not override project labels, source hierarchy, position sizing, or survival-first rules.
 ```
 
-- [ ] **Step 3: Run policy test**
+- [x] **Step 3: Run policy test**
 
 Run:
 
@@ -273,7 +268,7 @@ Expected: pass for the current return-opportunity skill, config, and `AGENTS.md`
 - Modify: `.agents/skills/us-stock-decision-workflow/SKILL.md`
 - Test: `tests/test_skill_routing_policy.py`
 
-- [ ] **Step 1: Extend policy test**
+- [x] **Step 1: Extend policy test**
 
 Add this method to `tests/test_skill_routing_policy.py`:
 
@@ -287,7 +282,7 @@ Add this method to `tests/test_skill_routing_policy.py`:
         self.assertIn("Risk-first verdict controls the final action label", text)
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 Run:
 
@@ -297,7 +292,7 @@ uv run python -m unittest tests.test_skill_routing_policy -v
 
 Expected: fail because `us-stock-decision-workflow` does not yet define the two modes.
 
-- [ ] **Step 3: Add mode routing section**
+- [x] **Step 3: Add mode routing section**
 
 In `.agents/skills/us-stock-decision-workflow/SKILL.md`, add this section after `Purpose`:
 
@@ -315,7 +310,7 @@ If the user explicitly asks for upside, growth, momentum, alpha, aggressive oppo
 Risk-first verdict controls the final action label. The return-seeking view can raise interest level, but it cannot remove invalidation triggers, position sizing, or downside controls.
 ```
 
-- [ ] **Step 4: Run policy test**
+- [x] **Step 4: Run policy test**
 
 Run:
 
@@ -330,7 +325,7 @@ Expected: pass.
 **Files:**
 - No source changes unless verification exposes missing config.
 
-- [ ] **Step 1: Confirm file layout**
+- [x] **Step 1: Confirm file layout**
 
 Run:
 
@@ -344,7 +339,7 @@ Expected output includes:
 .agents/skills/us-stock-return-opportunity/SKILL.md
 ```
 
-- [ ] **Step 2: Confirm model-visible prompt input when available**
+- [x] **Step 2: Confirm model-visible prompt input when available**
 
 Run:
 
@@ -362,7 +357,7 @@ If `codex debug prompt-input` is unavailable in the current runtime, run the pol
 **Files:**
 - All changed files.
 
-- [ ] **Step 1: Run policy test**
+- [x] **Step 1: Run policy test**
 
 Run:
 
@@ -372,7 +367,7 @@ uv run python -m unittest tests.test_skill_routing_policy -v
 
 Expected: pass.
 
-- [ ] **Step 2: Run full unit suite**
+- [x] **Step 2: Run full unit suite**
 
 Run:
 
@@ -382,7 +377,7 @@ uv run python -m unittest discover -s tests -v
 
 Expected: pass.
 
-- [ ] **Step 3: Inspect final diff**
+- [x] **Step 3: Inspect final diff**
 
 Run:
 

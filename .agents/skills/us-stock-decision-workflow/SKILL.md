@@ -7,6 +7,18 @@ description: Use when the user asks for US stock investment judgment, company an
 
 Purpose: make the project-local evidence pipeline the primary engine for US stock analysis, while using the external `us-stock-analysis` skill only as a supplemental checklist.
 
+## Mode Routing
+
+### Default Mode
+
+Use this workflow for generic US stock judgment, company analysis, valuation, peer comparison, price-move interpretation, or buy/hold/avoid decision support.
+
+### Return-Seeking Mode
+
+If the user explicitly asks for upside, growth, momentum, alpha, aggressive opportunity, rerating, or catalyst-driven buying, call `us-stock-return-opportunity` after local evidence and primary-source checks.
+
+Risk-first verdict controls the final action label. The return-seeking view can raise interest level, but it cannot remove invalidation triggers, position sizing, or downside controls.
+
 ## Priority Order
 
 1. State base date in Seoul time.
