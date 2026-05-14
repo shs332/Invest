@@ -46,7 +46,6 @@ class SkillRoutingPolicyTest(unittest.TestCase):
         commands: list[tuple[str, list[str]]] = []
         for skill_path in skill_paths:
             text = self.read(skill_path)
-            self.assertNotIn("scripts/update_company_bundle.py", text)
             self.assertNotIn("scripts/update_asset_bundle.py", text)
             self.assertNotIn("--mode history", text)
             self.assertNotIn("--dated", text)

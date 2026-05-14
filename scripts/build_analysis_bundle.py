@@ -27,10 +27,23 @@ def _format_period(period: dict) -> str:
     return "\n".join(lines)
 
 
-def build_bundle(ticker: str, output_dir: str | Path = "data/reports") -> Path:
+def build_bundle(
+    ticker: str,
+    output_dir: str | Path = "data/reports",
+    financials_path: str | Path | None = None,
+    price_path: str | Path | None = None,
+) -> Path:
     symbol = safe_symbol(ticker)
-    normalized = latest_matching(f"data/normalized/{symbol}_*_normalized.json")
-    price = latest_matching(f"data/raw/prices/{symbol}_*_price.json")
+    normalized = (
+        Path(financials_path)
+        if financials_path
+        else latest_matching(f"data/normalized/{symbol}_*_normalized.json")
+    )
+    price = (
+        Path(price_path)
+        if price_path
+        else latest_matching(f"data/raw/prices/{symbol}_*_price.json")
+    )
     if normalized is None:
         raise SystemExit(f"No normalized financial file found for {ticker}.")
 
@@ -76,8 +89,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build a markdown bundle from latest normalized and price data.")
     parser.add_argument("ticker")
     parser.add_argument("--output-dir", default="data/reports")
+    parser.add_argument("--financials", help="Explicit normalized financials path.")
+    parser.add_argument("--price", help="Explicit price snapshot path.")
     args = parser.parse_args()
-    print(build_bundle(args.ticker, args.output_dir))
+    print(build_bundle(args.ticker, args.output_dir, args.financials, args.price))
 
 
 if __name__ == "__main__":

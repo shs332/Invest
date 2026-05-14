@@ -23,19 +23,21 @@ Risk-first verdict controls the final action label. The return-seeking view can 
 
 1. State base date in Seoul time.
 2. Use local artifacts and scripts first when available:
+   - `uv run python scripts/update_company_bundle.py <TICKER> --market US`
+3. If orchestration is not enough, run the pipeline manually:
    - `uv run python scripts/fetch_sec_companyfacts.py <TICKER>`
    - `uv run python scripts/normalize_financials.py --source sec --ticker <TICKER> --input <RAW_JSON>`
    - `uv run python scripts/fetch_price_snapshot.py <TICKER> --range 1y --interval 1d`
    - `uv run python scripts/build_analysis_bundle.py <TICKER>`
-3. Check primary sources:
+4. Check primary sources:
    - SEC 10-K, 10-Q, 8-K.
    - Company IR, earnings release, shareholder letter, transcript if needed.
    - Exchange data for price/volume context.
-4. Apply project-owned analysis:
+5. Apply project-owned analysis:
    - `financial-statement-review` for financial quality.
    - `market-move-explainer` for recent move cause.
    - `risk-manager-investment-memo` for final action label and execution rules.
-5. Use external `us-stock-analysis` only after the above, as a completeness checklist for:
+6. Use external `us-stock-analysis` only after the above, as a completeness checklist for:
    - peer comparison;
    - valuation ratio coverage;
    - technical levels;
