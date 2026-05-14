@@ -1,3 +1,6 @@
+import re
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -33,6 +36,39 @@ class SkillRoutingPolicyTest(unittest.TestCase):
         self.assertIn("Return-Seeking Mode", text)
         self.assertIn("us-stock-return-opportunity", text)
         self.assertIn("Risk-first verdict controls the final action label", text)
+
+    def test_documented_skill_commands_match_repo_cli(self):
+        skill_paths = [
+            ".agents/skills/us-stock-decision-workflow/SKILL.md",
+            ".agents/skills/us-stock-return-opportunity/SKILL.md",
+            ".agents/skills/kr-stock-analysis-review/SKILL.md",
+        ]
+        commands: list[tuple[str, list[str]]] = []
+        for skill_path in skill_paths:
+            text = self.read(skill_path)
+            self.assertNotIn("scripts/update_company_bundle.py", text)
+            self.assertNotIn("scripts/update_asset_bundle.py", text)
+            self.assertNotIn("--mode history", text)
+            self.assertNotIn("--dated", text)
+            for match in re.finditer(r"`uv run python (scripts/[^`]+)`", text):
+                parts = match.group(1).split()
+                commands.append((parts[0], [part for part in parts[1:] if part.startswith("--")]))
+
+        self.assertTrue(commands)
+        help_cache: dict[str, str] = {}
+        for script_path, flags in commands:
+            full_path = ROOT / script_path
+            self.assertTrue(full_path.exists(), script_path)
+            if script_path not in help_cache:
+                completed = subprocess.run(
+                    [sys.executable, str(full_path), "--help"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                help_cache[script_path] = completed.stdout
+            for flag in flags:
+                self.assertIn(flag, help_cache[script_path], f"{flag} missing from {script_path} --help")
 
 
 if __name__ == "__main__":

@@ -22,9 +22,10 @@ Risk-first verdict controls the final action label. The return-seeking view can 
 ## Priority Order
 
 1. State base date in Seoul time.
-2. Use local artifacts and scripts first:
-   - `uv run python scripts/update_company_bundle.py <TICKER> --market US`
-   - `uv run python scripts/fetch_price_snapshot.py <TICKER> --mode history`
+2. Use local artifacts and scripts first when available:
+   - `uv run python scripts/fetch_sec_companyfacts.py <TICKER>`
+   - `uv run python scripts/normalize_financials.py --source sec --ticker <TICKER> --input <RAW_JSON>`
+   - `uv run python scripts/fetch_price_snapshot.py <TICKER> --range 1y --interval 1d`
    - `uv run python scripts/build_analysis_bundle.py <TICKER>`
 3. Check primary sources:
    - SEC 10-K, 10-Q, 8-K.
