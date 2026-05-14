@@ -22,3 +22,13 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+# Generated investment data; keep only directory placeholders in git
+data/cache/**
+data/raw/**
+data/normalized/**
+data/reports/**
+!data/cache/.gitkeep
+!data/raw/.gitkeep
+!data/normalized/.gitkeep
+!data/reports/.gitkeep
