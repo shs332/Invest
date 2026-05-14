@@ -20,17 +20,15 @@ Do not use for Korean ETFs. Use or create an ETF-specific workflow for those bec
    - `uv run python scripts/resolve_company.py "<ticker-or-name>" --market KR`
 3. Prefer the local pipeline when possible:
    - `uv run python scripts/fetch_dart_financials.py <CORP_CODE> --ticker <TICKER> --year <YYYY>`
-   - `uv run python scripts/normalize_financials.py --source dart --ticker <TICKER> --input <RAW_JSON> --dated`
-   - `uv run python scripts/fetch_price_snapshot.py <TICKER>.KS --mode history`
-4. If orchestration exists, prefer:
-   - `uv run python scripts/update_asset_bundle.py <TICKER> --market KR`
-5. Use primary sources first:
+   - `uv run python scripts/normalize_financials.py --source dart --ticker <TICKER> --input <RAW_JSON>`
+   - `uv run python scripts/fetch_price_snapshot.py <TICKER>.KS --range 1y --interval 1d`
+4. Use primary sources first:
    - DART annual, semiannual, quarterly reports.
    - DART current reports and major matters reports.
    - Company IR decks, earnings releases, shareholder letters.
    - KRX or KIND disclosures where relevant.
-6. Use news only after primary facts are checked.
-7. Analyze the business and financials using the same structure as US stock analysis, but adapt metrics to Korea-specific context.
+5. Use news only after primary facts are checked.
+6. Analyze the business and financials using the same structure as US stock analysis, but adapt metrics to Korea-specific context.
 
 ## Korea-Specific Checks
 
