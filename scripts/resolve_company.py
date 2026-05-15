@@ -9,9 +9,9 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from scripts.invest_utils import http_bytes, http_json, read_json, read_zip_text, write_json
+    from scripts.invest_utils import http_bytes, http_json, load_project_env, read_json, read_zip_text, write_json
 except ModuleNotFoundError:
-    from invest_utils import http_bytes, http_json, read_json, read_zip_text, write_json
+    from invest_utils import http_bytes, http_json, load_project_env, read_json, read_zip_text, write_json
 
 
 SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
@@ -139,6 +139,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=10)
     parser.add_argument("--json", action="store_true", help="Print raw JSON matches.")
     args = parser.parse_args()
+    load_project_env()
     matches = resolve_company(args.query, args.market, args.refresh, args.limit)
     if args.json:
         print(json.dumps(matches, ensure_ascii=False, indent=2))
@@ -154,4 +155,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
