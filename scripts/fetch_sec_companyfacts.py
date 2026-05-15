@@ -48,7 +48,10 @@ def main() -> None:
     parser.add_argument("--out-dir", default="data/raw/sec")
     args = parser.parse_args()
     load_project_env()
-    data = fetch_companyfacts(args.ticker, args.cik)
+    try:
+        data = fetch_companyfacts(args.ticker, args.cik)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc))
     output = Path(args.out_dir) / f"{safe_symbol(args.ticker)}_{now_kst_date()}_companyfacts.json"
     print(write_json(output, data))
 

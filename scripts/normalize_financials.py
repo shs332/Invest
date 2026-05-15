@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from scripts.invest_utils import now_kst_iso, parse_amount, read_json, safe_symbol, write_json
+    from scripts.invest_utils import now_kst_iso, parse_amount, read_json, safe_symbol, validate_dart_response, write_json
 except ModuleNotFoundError:
-    from invest_utils import now_kst_iso, parse_amount, read_json, safe_symbol, write_json
+    from invest_utils import now_kst_iso, parse_amount, read_json, safe_symbol, validate_dart_response, write_json
 
 
 SEC_CONCEPTS = {
@@ -118,7 +118,8 @@ def _matches_any(account_name: str, patterns: list[str]) -> bool:
     return any(pattern.replace(" ", "") in compact for pattern in patterns)
 
 
-def normalize_dart_financials(raw: dict[str, Any], ticker: str, market: str = "KR") -> dict[str, Any]:
+def normalize_dart_financials(raw: dict[str, Any], ticker: str, market: str = "KR", allow_empty: bool = False) -> dict[str, Any]:
+    validate_dart_response(raw, allow_empty=allow_empty)
     grouped: dict[int, dict[str, Any]] = defaultdict(dict)
     for item in raw.get("list", []):
         year = parse_amount(item.get("bsns_year"))
@@ -148,12 +149,12 @@ def normalize_dart_financials(raw: dict[str, Any], ticker: str, market: str = "K
     }
 
 
-def normalize_file(source: str, ticker: str, input_path: str | Path, output_dir: str | Path) -> Path:
+def normalize_file(source: str, ticker: str, input_path: str | Path, output_dir: str | Path, allow_empty: bool = False) -> Path:
     raw = read_json(input_path)
     if source == "sec":
         result = normalize_sec_companyfacts(raw, ticker)
     elif source == "dart":
-        result = normalize_dart_financials(raw, ticker)
+        result = normalize_dart_financials(raw, ticker, allow_empty=allow_empty)
     else:
         raise ValueError(f"unknown source: {source}")
     output = Path(output_dir) / f"{safe_symbol(ticker)}_{source}_normalized.json"
@@ -166,8 +167,12 @@ def main() -> None:
     parser.add_argument("--ticker", required=True)
     parser.add_argument("--input", required=True)
     parser.add_argument("--output-dir", default="data/normalized")
+    parser.add_argument("--allow-empty", action="store_true", help="Allow empty DART provider responses for debugging.")
     args = parser.parse_args()
-    output = normalize_file(args.source, args.ticker, args.input, args.output_dir)
+    try:
+        output = normalize_file(args.source, args.ticker, args.input, args.output_dir, allow_empty=args.allow_empty)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc))
     print(output)
 
 

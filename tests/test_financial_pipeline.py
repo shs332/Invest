@@ -1,5 +1,7 @@
 import unittest
+from unittest.mock import patch
 
+from scripts.fetch_dart_financials import fetch_dart_financials
 from scripts.normalize_financials import normalize_dart_financials, normalize_sec_companyfacts
 
 
@@ -66,7 +68,43 @@ class NormalizeFinancialsTest(unittest.TestCase):
         self.assertEqual(result["periods"][0]["operating_income"], 200)
         self.assertEqual(result["periods"][0]["free_cash_flow"], 110)
 
+    def test_rejects_empty_dart_provider_response_by_default(self):
+        raw = {"status": "013", "message": "조회된 데이타가 없습니다."}
+
+        with self.assertRaises(RuntimeError) as context:
+            normalize_dart_financials(raw, "005930", market="KR")
+
+        message = str(context.exception)
+        self.assertIn("OpenDART returned unusable financial data", message)
+        self.assertIn("013", message)
+        self.assertIn("조회된 데이타가 없습니다.", message)
+
+    def test_allows_empty_dart_response_when_explicit(self):
+        raw = {"status": "013", "message": "조회된 데이타가 없습니다."}
+
+        result = normalize_dart_financials(raw, "005930", market="KR", allow_empty=True)
+
+        self.assertEqual(result["status"], "013")
+        self.assertEqual(result["periods"], [])
+
+    def test_fetch_dart_rejects_empty_provider_response_by_default(self):
+        raw = {"status": "013", "message": "조회된 데이타가 없습니다."}
+
+        with patch("scripts.fetch_dart_financials.http_json", return_value=raw):
+            with self.assertRaises(RuntimeError) as context:
+                fetch_dart_financials("00126380", 2026, "11013", api_key="test-key")
+
+        self.assertIn("OpenDART returned unusable financial data", str(context.exception))
+
+    def test_fetch_dart_allows_empty_provider_response_when_explicit(self):
+        raw = {"status": "013", "message": "조회된 데이타가 없습니다."}
+
+        with patch("scripts.fetch_dart_financials.http_json", return_value=raw):
+            result = fetch_dart_financials("00126380", 2026, "11013", api_key="test-key", allow_empty=True)
+
+        self.assertEqual(result["status"], "013")
+        self.assertEqual(result["_fetch"]["corp_code"], "00126380")
+
 
 if __name__ == "__main__":
     unittest.main()
-

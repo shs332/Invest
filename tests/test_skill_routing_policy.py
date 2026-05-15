@@ -25,9 +25,9 @@ class SkillRoutingPolicyTest(unittest.TestCase):
     def test_agents_routes_risk_and_return_modes(self):
         text = self.read("AGENTS.md")
 
-        self.assertIn("Default investment workflow is survival-first risk minimization.", text)
+        self.assertIn("Default investment workflow is evidence-first risk/reward assessment.", text)
         self.assertIn("use `us-stock-return-opportunity`", text)
-        self.assertIn("Risk-first verdict controls the final action label", text)
+        self.assertIn("risk-management verdict controls the final action label", text.lower())
 
     def test_us_decision_workflow_delegates_explicit_return_requests(self):
         text = self.read(".agents/skills/us-stock-decision-workflow/SKILL.md")
@@ -35,7 +35,7 @@ class SkillRoutingPolicyTest(unittest.TestCase):
         self.assertIn("Default Mode", text)
         self.assertIn("Return-Seeking Mode", text)
         self.assertIn("us-stock-return-opportunity", text)
-        self.assertIn("Risk-first verdict controls the final action label", text)
+        self.assertIn("risk-management verdict controls the final action label", text.lower())
 
     def test_documented_skill_commands_match_repo_cli(self):
         skill_paths = [
