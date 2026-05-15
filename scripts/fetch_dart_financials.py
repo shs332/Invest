@@ -7,9 +7,9 @@ from datetime import datetime
 from pathlib import Path
 
 try:
-    from scripts.invest_utils import http_json, load_project_env, now_kst_date, safe_symbol, validate_dart_response, write_json
+    from scripts.invest_utils import KST, http_json, load_project_env, now_kst_date, safe_symbol, validate_dart_response, write_json
 except ModuleNotFoundError:
-    from invest_utils import http_json, load_project_env, now_kst_date, safe_symbol, validate_dart_response, write_json
+    from invest_utils import KST, http_json, load_project_env, now_kst_date, safe_symbol, validate_dart_response, write_json
 
 
 DART_FINANCIALS_URL = "https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json"
@@ -47,7 +47,7 @@ def fetch_dart_financials(
 
 
 def main() -> None:
-    default_year = datetime.now().year - 1
+    default_year = datetime.now(KST).year - 1
     parser = argparse.ArgumentParser(description="Fetch OpenDART single-company full financial statements.")
     parser.add_argument("corp_code", help="OpenDART corp_code, not stock ticker.")
     parser.add_argument("--ticker", help="Optional stock ticker used only for output filename.")
@@ -58,7 +58,7 @@ def main() -> None:
     parser.add_argument("--out-dir", default="data/raw/dart")
     args = parser.parse_args()
     load_project_env()
-    if args.report_code is None and args.year >= datetime.now().year:
+    if args.report_code is None and args.year >= datetime.now(KST).year:
         raise SystemExit("Current-year DART fetch requires explicit --report-code (11013 Q1, 11012 half, 11014 Q3, or 11011 annual after filing).")
     report_code = args.report_code or "11011"
     try:

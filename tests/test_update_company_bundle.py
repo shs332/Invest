@@ -69,7 +69,7 @@ class UpdateCompanyBundleTest(unittest.TestCase):
 
     def test_update_company_bundle_rejects_non_us_market(self):
         with patch.object(update_company_bundle, "run_command") as run_command_mock:
-            with self.assertRaises(SystemExit) as context:
+            with self.assertRaises(RuntimeError) as context:
                 update_company_bundle.update_company_bundle("005930", "KR")
 
         self.assertIn("US/SEC only", str(context.exception))

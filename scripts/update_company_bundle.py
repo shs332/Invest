@@ -46,7 +46,7 @@ def update_company_bundle(
     price_interval: str = "1d",
 ) -> Path:
     if market.upper() != "US":
-        raise SystemExit("update_company_bundle currently supports US/SEC only.")
+        raise RuntimeError("update_company_bundle currently supports US/SEC only.")
 
     raw_path = run_command([
         sys.executable,
