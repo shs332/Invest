@@ -35,7 +35,7 @@ class UpdateCompanyBundleTest(unittest.TestCase):
                     sys.executable,
                     str(update_company_bundle.SCRIPT_DIR / "fetch_sec_companyfacts.py"),
                     "AAPL",
-                ]),
+                ], stage="fetch SEC companyfacts"),
                 unittest.mock.call([
                     sys.executable,
                     str(update_company_bundle.SCRIPT_DIR / "normalize_financials.py"),
@@ -45,7 +45,7 @@ class UpdateCompanyBundleTest(unittest.TestCase):
                     "AAPL",
                     "--input",
                     "data/raw/sec/AAPL_raw.json",
-                ]),
+                ], stage="normalize financials"),
                 unittest.mock.call([
                     sys.executable,
                     str(update_company_bundle.SCRIPT_DIR / "fetch_price_snapshot.py"),
@@ -54,7 +54,7 @@ class UpdateCompanyBundleTest(unittest.TestCase):
                     "6mo",
                     "--interval",
                     "1d",
-                ]),
+                ], stage="fetch price"),
                 unittest.mock.call([
                     sys.executable,
                     str(update_company_bundle.SCRIPT_DIR / "build_analysis_bundle.py"),
@@ -63,7 +63,7 @@ class UpdateCompanyBundleTest(unittest.TestCase):
                     "data/normalized/AAPL_sec_normalized.json",
                     "--price",
                     "data/raw/prices/AAPL_price.json",
-                ]),
+                ], stage="build bundle"),
             ],
         )
 
@@ -96,7 +96,7 @@ class UpdateCompanyBundleTest(unittest.TestCase):
                 "AAPL",
                 "--financials",
                 "data/normalized/AAPL_sec_normalized.json",
-            ]),
+            ], stage="build bundle"),
         )
 
     def test_run_command_returns_last_non_empty_line(self):
@@ -129,9 +129,10 @@ class UpdateCompanyBundleTest(unittest.TestCase):
         )
         with patch.object(update_company_bundle.subprocess, "run", side_effect=error):
             with self.assertRaises(RuntimeError) as context:
-                run_command(["cmd"])
+                run_command(["cmd"], stage="fetch SEC")
 
         message = str(context.exception)
+        self.assertIn("stage failed: fetch SEC", message)
         self.assertIn("command failed: cmd", message)
         self.assertIn("exit code: 2", message)
         self.assertIn("bad child", message)

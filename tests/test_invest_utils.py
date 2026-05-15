@@ -1,9 +1,11 @@
 import os
 import tempfile
+import urllib.error
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from scripts.invest_utils import load_project_env
+from scripts.invest_utils import NetworkFetchError, http_json, load_project_env
 
 
 class InvestUtilsEnvTest(unittest.TestCase):
@@ -71,6 +73,19 @@ class InvestUtilsEnvTest(unittest.TestCase):
                     os.environ.pop("REPLACE_ME", None)
                 else:
                     os.environ["REPLACE_ME"] = previous
+
+
+class InvestUtilsNetworkTest(unittest.TestCase):
+    def test_http_json_wraps_url_errors_with_retry_hint(self):
+        with patch("scripts.invest_utils.urllib.request.urlopen", side_effect=urllib.error.URLError("dns failed")):
+            with self.assertRaises(NetworkFetchError) as context:
+                http_json("https://example.test/data.json?crtfc_key=secret&symbol=AAPL")
+
+        message = str(context.exception)
+        self.assertIn("network fetch failed for https://example.test/data.json?crtfc_key=REDACTED&symbol=AAPL", message)
+        self.assertNotIn("secret", message)
+        self.assertIn("sandbox/network/DNS/provider", message)
+        self.assertIn("network approval", message)
 
 
 if __name__ == "__main__":

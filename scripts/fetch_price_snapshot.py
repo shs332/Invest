@@ -26,10 +26,10 @@ def yahoo_symbol_to_stooq(symbol: str) -> str:
 
 
 def _parse_number(value) -> float | None:
-    if value in (None, "", "N/A", "NA"):
+    if value is None:
         return None
     cleaned = str(value).replace("$", "").replace(",", "").replace("%", "").strip()
-    if not cleaned:
+    if not cleaned or cleaned.upper() in {"N/A", "NA", "N/D", "ND", "-"}:
         return None
     return float(cleaned)
 
@@ -44,8 +44,15 @@ def summarize_stooq_csv(csv_text: str, symbol: str) -> dict:
     if not rows or "Close" not in rows[0]:
         raise RuntimeError("stooq returned no price rows")
 
-    closes = [float(row["Close"]) for row in rows if row.get("Close") not in (None, "", "N/A")]
-    volumes = [int(float(row["Volume"])) for row in rows if row.get("Volume") not in (None, "", "N/A")]
+    closes = []
+    volumes = []
+    for row in rows:
+        close = _parse_number(row.get("Close"))
+        volume = _parse_int(row.get("Volume"))
+        if close is not None:
+            closes.append(close)
+        if volume is not None:
+            volumes.append(volume)
     if not closes:
         raise RuntimeError("stooq returned no close prices")
 
@@ -172,7 +179,7 @@ def fetch_stooq_price_snapshot(symbol: str, range_: str = "1y", interval: str = 
 
 
 def fetch_nasdaq_price_snapshot(symbol: str, range_: str = "1y", interval: str = "1d") -> dict:
-    if "." in symbol:
+    if "." in symbol or symbol.strip().isdigit():
         raise RuntimeError("nasdaq provider supports plain US tickers only")
     url = NASDAQ_QUOTE_URL.format(symbol=urllib.parse.quote(symbol.upper(), safe=""))
     raw = http_json(url, headers=NASDAQ_HEADERS)
@@ -199,6 +206,13 @@ def fetch_price_snapshot(
         fetcher = fetchers.get(provider)
         if fetcher is None:
             raise ValueError(f"unknown price provider: {provider}")
+        if provider == "nasdaq" and ("." in symbol or symbol.strip().isdigit()):
+            attempts.append({
+                "provider": provider,
+                "status": "skipped",
+                "reason": "nasdaq provider supports plain US tickers only",
+            })
+            continue
         try:
             data = fetcher(symbol, range_, interval)
         except Exception as exc:
@@ -219,7 +233,10 @@ def main() -> None:
     parser.add_argument("--out-dir", default="data/raw/prices")
     args = parser.parse_args()
     providers = [provider.strip() for provider in args.providers.split(",") if provider.strip()]
-    data = fetch_price_snapshot(args.symbol, args.range, args.interval, providers=providers)
+    try:
+        data = fetch_price_snapshot(args.symbol, args.range, args.interval, providers=providers)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc))
     output = Path(args.out_dir) / f"{safe_symbol(args.symbol)}_{now_kst_date()}_price.json"
     print(write_json(output, data))
 

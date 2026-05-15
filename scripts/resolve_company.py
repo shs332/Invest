@@ -27,7 +27,12 @@ def _sec_headers() -> dict[str, str]:
 def ensure_sec_cache(path: Path = DEFAULT_SEC_CACHE, refresh: bool = False) -> Path:
     if path.exists() and not refresh:
         return path
-    data = http_json(SEC_TICKERS_URL, headers=_sec_headers())
+    try:
+        data = http_json(SEC_TICKERS_URL, headers=_sec_headers())
+    except RuntimeError as exc:
+        if path.exists():
+            raise RuntimeError(f"SEC cache refresh failed for {path}: {exc}") from exc
+        raise RuntimeError(f"SEC cache missing at {path}; fetch failed: {exc}") from exc
     return write_json(path, data)
 
 
@@ -38,7 +43,12 @@ def ensure_dart_cache(path: Path = DEFAULT_DART_CACHE, refresh: bool = False, ap
     if not key:
         raise SystemExit("Missing OPENDART_API_KEY or DART_API_KEY environment variable.")
     url = f"{DART_CORP_CODE_URL}?{urllib.parse.urlencode({'crtfc_key': key})}"
-    xml_text = read_zip_text(http_bytes(url), ".xml")
+    try:
+        xml_text = read_zip_text(http_bytes(url), ".xml")
+    except RuntimeError as exc:
+        if path.exists():
+            raise RuntimeError(f"DART cache refresh failed for {path}: {exc}") from exc
+        raise RuntimeError(f"DART cache missing at {path}; fetch failed: {exc}") from exc
     root = ET.fromstring(xml_text)
     rows = []
     for item in root.findall("list"):
@@ -140,7 +150,10 @@ def main() -> None:
     parser.add_argument("--json", action="store_true", help="Print raw JSON matches.")
     args = parser.parse_args()
     load_project_env()
-    matches = resolve_company(args.query, args.market, args.refresh, args.limit)
+    try:
+        matches = resolve_company(args.query, args.market, args.refresh, args.limit)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc))
     if args.json:
         print(json.dumps(matches, ensure_ascii=False, indent=2))
         return

@@ -66,7 +66,25 @@ class NormalizeFinancialsTest(unittest.TestCase):
         self.assertEqual(result["periods"][0]["operating_income"], 200)
         self.assertEqual(result["periods"][0]["free_cash_flow"], 110)
 
+    def test_rejects_empty_dart_provider_response_by_default(self):
+        raw = {"status": "013", "message": "조회된 데이타가 없습니다."}
+
+        with self.assertRaises(RuntimeError) as context:
+            normalize_dart_financials(raw, "005930", market="KR")
+
+        message = str(context.exception)
+        self.assertIn("OpenDART returned unusable financial data", message)
+        self.assertIn("013", message)
+        self.assertIn("조회된 데이타가 없습니다.", message)
+
+    def test_allows_empty_dart_response_when_explicit(self):
+        raw = {"status": "013", "message": "조회된 데이타가 없습니다."}
+
+        result = normalize_dart_financials(raw, "005930", market="KR", allow_empty=True)
+
+        self.assertEqual(result["status"], "013")
+        self.assertEqual(result["periods"], [])
+
 
 if __name__ == "__main__":
     unittest.main()
-

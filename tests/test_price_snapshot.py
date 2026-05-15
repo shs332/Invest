@@ -46,6 +46,19 @@ class PriceSnapshotTest(unittest.TestCase):
         self.assertEqual(result["latest_volume"], 41166897)
         self.assertEqual(result["points"], 1)
 
+    def test_stooq_quote_nd_close_is_clean_missing_price_error(self):
+        csv_text = "\n".join(
+            [
+                "Symbol,Date,Time,Open,High,Low,Close,Volume",
+                "005930.KS,N/D,N/D,N/D,N/D,N/D,N/D,N/D",
+            ]
+        )
+
+        with self.assertRaises(RuntimeError) as context:
+            summarize_stooq_quote_csv(csv_text, "005930.KS")
+
+        self.assertIn("stooq quote returned no close price", str(context.exception))
+
     def test_summarizes_nasdaq_quote(self):
         raw = {
             "data": {
@@ -109,6 +122,29 @@ class PriceSnapshotTest(unittest.TestCase):
         self.assertEqual(calls, ["stooq", "nasdaq"])
         self.assertEqual(result["_fetch"]["attempts"][0]["provider"], "stooq")
         self.assertIn("stooq unavailable", result["_fetch"]["attempts"][0]["error"])
+
+    def test_skips_nasdaq_for_non_us_dotted_symbol(self):
+        calls = []
+
+        def fake_stooq(symbol, range_, interval):
+            calls.append("stooq")
+            raise RuntimeError("stooq quote returned no close price")
+
+        def fake_nasdaq(symbol, range_, interval):
+            calls.append("nasdaq")
+            raise AssertionError("nasdaq should be skipped for dotted non-US symbols")
+
+        def fake_yahoo(symbol, range_, interval):
+            calls.append("yahoo")
+            return {"summary": {"source": "yahoo_chart"}, "raw": {}}
+
+        result = fetch_price_snapshot("005930.KS", stooq_fetcher=fake_stooq, nasdaq_fetcher=fake_nasdaq, yahoo_fetcher=fake_yahoo)
+
+        self.assertEqual(result["summary"]["source"], "yahoo_chart")
+        self.assertEqual(calls, ["stooq", "yahoo"])
+        self.assertEqual(result["_fetch"]["attempts"][1]["provider"], "nasdaq")
+        self.assertEqual(result["_fetch"]["attempts"][1]["status"], "skipped")
+        self.assertIn("plain US tickers", result["_fetch"]["attempts"][1]["reason"])
 
     def test_maps_plain_us_symbol_to_stooq_us_suffix(self):
         self.assertEqual(yahoo_symbol_to_stooq("AAPL"), "aapl.us")
