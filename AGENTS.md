@@ -1,4 +1,3 @@
-- Start each session with `caveman:caveman` when available.
 - This workspace is for periodic, user-initiated stock/company analysis, not automated trading.
 - Treat outputs as evidence-based decision support, not guaranteed investment advice.
 - For stock, ETF, company, price-move, earnings, or valuation questions, verify recent data with web research before giving a current judgment.
