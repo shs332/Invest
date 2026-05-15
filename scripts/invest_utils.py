@@ -6,6 +6,7 @@ import re
 import zipfile
 import gzip
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime
 from pathlib import Path
@@ -14,6 +15,23 @@ from zoneinfo import ZoneInfo
 
 
 KST = ZoneInfo("Asia/Seoul")
+SENSITIVE_QUERY_KEYS = {"crtfc_key", "api_key", "apikey", "key", "token", "access_token"}
+
+
+class NetworkFetchError(RuntimeError):
+    pass
+
+
+def _safe_url(url: str) -> str:
+    parsed = urllib.parse.urlsplit(url)
+    if not parsed.query:
+        return url
+    query = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+    redacted = [
+        (key, "REDACTED" if key.lower() in SENSITIVE_QUERY_KEYS else value)
+        for key, value in query
+    ]
+    return urllib.parse.urlunsplit(parsed._replace(query=urllib.parse.urlencode(redacted)))
 
 
 def project_root() -> Path:
@@ -98,6 +116,7 @@ def latest_matching(pattern: str, root: str | Path = ".") -> Path | None:
 
 def http_json(url: str, headers: dict[str, str] | None = None, timeout: int = 30) -> Any:
     request = urllib.request.Request(url, headers=headers or {})
+    display_url = _safe_url(url)
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             body = response.read()
@@ -106,11 +125,18 @@ def http_json(url: str, headers: dict[str, str] | None = None, timeout: int = 30
             return json.loads(body.decode("utf-8"))
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"HTTP {exc.code} for {url}: {body[:500]}") from exc
+        raise RuntimeError(f"HTTP {exc.code} for {display_url}: {body[:500]}") from exc
+    except (urllib.error.URLError, TimeoutError) as exc:
+        raise NetworkFetchError(
+            f"network fetch failed for {display_url}: {exc}. "
+            "Likely cause: sandbox/network/DNS/provider. "
+            "Retry with network approval or use cached artifact."
+        ) from exc
 
 
 def http_bytes(url: str, headers: dict[str, str] | None = None, timeout: int = 30) -> bytes:
     request = urllib.request.Request(url, headers=headers or {})
+    display_url = _safe_url(url)
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             body = response.read()
@@ -119,7 +145,27 @@ def http_bytes(url: str, headers: dict[str, str] | None = None, timeout: int = 3
             return body
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"HTTP {exc.code} for {url}: {body[:500]}") from exc
+        raise RuntimeError(f"HTTP {exc.code} for {display_url}: {body[:500]}") from exc
+    except (urllib.error.URLError, TimeoutError) as exc:
+        raise NetworkFetchError(
+            f"network fetch failed for {display_url}: {exc}. "
+            "Likely cause: sandbox/network/DNS/provider. "
+            "Retry with network approval or use cached artifact."
+        ) from exc
+
+
+def validate_dart_response(raw: dict[str, Any], allow_empty: bool = False) -> None:
+    if allow_empty:
+        return
+    status = raw.get("status")
+    message = raw.get("message")
+    rows = raw.get("list")
+    if status != "000" or not isinstance(rows, list) or not rows:
+        raise RuntimeError(
+            "OpenDART returned unusable financial data "
+            f"(status={status}, message={message}, rows={0 if not isinstance(rows, list) else len(rows)}). "
+            "Use a filed period/report-code or pass --allow-empty for provider debugging."
+        )
 
 
 def read_zip_text(zip_bytes: bytes, suffix: str) -> str:

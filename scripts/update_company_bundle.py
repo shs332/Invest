@@ -14,15 +14,18 @@ def _command_text(args: list[str]) -> str:
     return " ".join(args)
 
 
-def run_command(args: list[str], cwd: Path = REPO_ROOT) -> str:
+def run_command(args: list[str], cwd: Path = REPO_ROOT, stage: str | None = None) -> str:
     try:
         completed = subprocess.run(args, check=True, text=True, capture_output=True, cwd=cwd)
     except subprocess.CalledProcessError as exc:
         stdout_lines = [line for line in (exc.stdout or "").splitlines() if line.strip()]
-        details = [
+        details = []
+        if stage:
+            details.append(f"stage failed: {stage}")
+        details.extend([
             f"command failed: {_command_text(args)}",
             f"exit code: {exc.returncode}",
-        ]
+        ])
         if exc.stderr:
             details.append(f"stderr: {exc.stderr.strip()}")
         if stdout_lines:
@@ -31,7 +34,8 @@ def run_command(args: list[str], cwd: Path = REPO_ROOT) -> str:
 
     stdout_lines = [line for line in completed.stdout.splitlines() if line.strip()]
     if not stdout_lines:
-        raise RuntimeError(f"command produced no output: {_command_text(args)}")
+        prefix = f"{stage}: " if stage else ""
+        raise RuntimeError(f"{prefix}command produced no output: {_command_text(args)}")
     return stdout_lines[-1]
 
 
@@ -42,13 +46,13 @@ def update_company_bundle(
     price_interval: str = "1d",
 ) -> Path:
     if market.upper() != "US":
-        raise SystemExit("update_company_bundle currently supports US/SEC only.")
+        raise RuntimeError("update_company_bundle currently supports US/SEC only.")
 
     raw_path = run_command([
         sys.executable,
         str(SCRIPT_DIR / "fetch_sec_companyfacts.py"),
         ticker,
-    ])
+    ], stage="fetch SEC companyfacts")
     normalized_path = run_command([
         sys.executable,
         str(SCRIPT_DIR / "normalize_financials.py"),
@@ -58,7 +62,7 @@ def update_company_bundle(
         ticker,
         "--input",
         raw_path,
-    ])
+    ], stage="normalize financials")
     try:
         price_path = run_command([
             sys.executable,
@@ -68,7 +72,7 @@ def update_company_bundle(
             price_range,
             "--interval",
             price_interval,
-        ])
+        ], stage="fetch price")
     except RuntimeError as exc:
         print(f"Price fetch failed: {exc}", file=sys.stderr)
         price_path = None
@@ -82,18 +86,21 @@ def update_company_bundle(
     ]
     if price_path:
         bundle_args.extend(["--price", price_path])
-    bundle_path = run_command(bundle_args)
+    bundle_path = run_command(bundle_args, stage="build bundle")
     return Path(bundle_path)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Fetch, normalize, price, and bundle a US company analysis snapshot.")
     parser.add_argument("ticker", help="US company ticker symbol, e.g. AAPL.")
-    parser.add_argument("--market", choices=["US"], default="US")
+    parser.add_argument("--market", choices=["US", "KR"], default="US")
     parser.add_argument("--price-range", default="1y")
     parser.add_argument("--price-interval", default="1d")
     args = parser.parse_args()
-    print(update_company_bundle(args.ticker, args.market, args.price_range, args.price_interval))
+    try:
+        print(update_company_bundle(args.ticker, args.market, args.price_range, args.price_interval))
+    except RuntimeError as exc:
+        raise SystemExit(str(exc))
 
 
 if __name__ == "__main__":
