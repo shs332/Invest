@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import zipfile
 import gzip
@@ -13,6 +14,55 @@ from zoneinfo import ZoneInfo
 
 
 KST = ZoneInfo("Asia/Seoul")
+
+
+def project_root() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
+def _strip_inline_comment(value: str) -> str:
+    quote: str | None = None
+    escaped = False
+    for index, char in enumerate(value):
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if char in {"'", '"'}:
+            quote = None if quote == char else char if quote is None else quote
+            continue
+        if char == "#" and quote is None and (index == 0 or value[index - 1].isspace()):
+            return value[:index].rstrip()
+    return value.strip()
+
+
+def load_project_env(path: str | Path | None = None, override: bool = False) -> dict[str, str]:
+    env_path = Path(path) if path is not None else project_root() / ".env"
+    loaded: dict[str, str] = {}
+    if not env_path.exists():
+        return loaded
+
+    for line_number, raw_line in enumerate(env_path.read_text(encoding="utf-8").splitlines(), 1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export ") :].lstrip()
+        if "=" not in line:
+            raise ValueError(f"invalid .env line {line_number}: missing '='")
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if not key or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+            raise ValueError(f"invalid .env line {line_number}: invalid key")
+        value = _strip_inline_comment(value.strip())
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        loaded[key] = value
+        if override or key not in os.environ:
+            os.environ[key] = value
+    return loaded
 
 
 def now_kst_date() -> str:

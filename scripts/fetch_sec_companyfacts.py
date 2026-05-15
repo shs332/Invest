@@ -5,10 +5,10 @@ import os
 from pathlib import Path
 
 try:
-    from scripts.invest_utils import http_json, now_kst_date, safe_symbol, write_json
+    from scripts.invest_utils import http_json, load_project_env, now_kst_date, safe_symbol, write_json
     from scripts.resolve_company import resolve_company
 except ModuleNotFoundError:
-    from invest_utils import http_json, now_kst_date, safe_symbol, write_json
+    from invest_utils import http_json, load_project_env, now_kst_date, safe_symbol, write_json
     from resolve_company import resolve_company
 
 
@@ -47,6 +47,7 @@ def main() -> None:
     parser.add_argument("--cik")
     parser.add_argument("--out-dir", default="data/raw/sec")
     args = parser.parse_args()
+    load_project_env()
     data = fetch_companyfacts(args.ticker, args.cik)
     output = Path(args.out_dir) / f"{safe_symbol(args.ticker)}_{now_kst_date()}_companyfacts.json"
     print(write_json(output, data))
