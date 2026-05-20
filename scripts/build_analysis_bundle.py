@@ -27,6 +27,49 @@ def _format_period(period: dict) -> str:
     return "\n".join(lines)
 
 
+def _format_filing_sources(financials: dict, price_data: dict | None) -> list[str]:
+    lines = ["## Filing Sources", ""]
+    lines.append(f"- financial_source: {financials.get('source', 'missing')}")
+    lines.append(f"- market: {financials.get('market', 'missing')}")
+    lines.append(f"- cik: {financials.get('cik', 'missing')}")
+    price_fetch = price_data.get("_fetch", {}) if price_data else {}
+    lines.append(f"- price_provider: {price_fetch.get('provider', 'missing')}")
+    lines.append(f"- price_source_url: {price_fetch.get('source_url', 'missing')}")
+    lines.append("")
+    return lines
+
+
+def _format_valuation_slots() -> list[str]:
+    return [
+        "## Valuation Slots",
+        "",
+        "- market_cap: missing",
+        "- enterprise_value: missing",
+        "- trailing_pe: missing",
+        "- forward_pe: missing",
+        "- ev_to_ebitda: missing",
+        "- fcf_yield: missing",
+        "- peer_set: missing",
+        "",
+    ]
+
+
+def _format_source_gaps(price_data: dict | None) -> list[str]:
+    gaps = [
+        "## Source Gaps",
+        "",
+        "- valuation ratios require external/primary market-cap or enterprise-value source",
+        "- peer comparison requires explicitly selected comparable companies",
+    ]
+    summary = price_data.get("summary", {}) if price_data else {}
+    if price_data is None:
+        gaps.append("- price source is missing")
+    elif not summary.get("history_available"):
+        gaps.append("- price history is quote-only; range return/drawdown needs history-capable provider")
+    gaps.append("")
+    return gaps
+
+
 def build_bundle(
     ticker: str,
     output_dir: str | Path = "data/reports",
@@ -68,6 +111,9 @@ def build_bundle(
         for key, value in price_data.get("summary", {}).items():
             lines.append(f"- {key}: {value}")
         lines.append("")
+    lines.extend(_format_filing_sources(financials, price_data))
+    lines.extend(_format_valuation_slots())
+    lines.extend(_format_source_gaps(price_data))
     lines.extend(
         [
             "## Memo Prompts",
