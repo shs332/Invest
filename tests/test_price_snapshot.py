@@ -29,6 +29,8 @@ class PriceSnapshotTest(unittest.TestCase):
         self.assertEqual(result["min_close"], 100.0)
         self.assertEqual(result["latest_volume"], 1200)
         self.assertEqual(result["points"], 2)
+        self.assertTrue(result["history_available"])
+        self.assertEqual(result["history_points"], 2)
 
     def test_summarizes_stooq_quote_csv(self):
         csv_text = "\n".join(
@@ -45,6 +47,8 @@ class PriceSnapshotTest(unittest.TestCase):
         self.assertEqual(result["latest_close"], 292.68)
         self.assertEqual(result["latest_volume"], 41166897)
         self.assertEqual(result["points"], 1)
+        self.assertFalse(result["history_available"])
+        self.assertEqual(result["history_points"], 1)
 
     def test_stooq_quote_nd_close_is_clean_missing_price_error(self):
         csv_text = "\n".join(
@@ -80,13 +84,15 @@ class PriceSnapshotTest(unittest.TestCase):
         self.assertEqual(result["latest_volume"], 42247485)
         self.assertEqual(result["min_close"], 193.46)
         self.assertEqual(result["max_close"], 294.76)
+        self.assertFalse(result["history_available"])
+        self.assertEqual(result["history_points"], 1)
 
     def test_uses_stooq_before_yahoo(self):
         calls = []
 
         def fake_stooq(symbol, range_, interval):
             calls.append("stooq")
-            return {"summary": {"source": "stooq_csv"}, "raw": "csv"}
+            return {"summary": {"source": "stooq_csv", "history_available": True, "history_points": 252}, "raw": "csv"}
 
         def fake_nasdaq(symbol, range_, interval):
             calls.append("nasdaq")
@@ -116,7 +122,7 @@ class PriceSnapshotTest(unittest.TestCase):
             calls.append("yahoo")
             return {"summary": {"source": "yahoo_chart"}, "raw": {}}
 
-        result = fetch_price_snapshot("AAPL", stooq_fetcher=fake_stooq, nasdaq_fetcher=fake_nasdaq, yahoo_fetcher=fake_yahoo)
+        result = fetch_price_snapshot("AAPL", "quote", "1d", stooq_fetcher=fake_stooq, nasdaq_fetcher=fake_nasdaq, yahoo_fetcher=fake_yahoo)
 
         self.assertEqual(result["summary"]["source"], "nasdaq_quote")
         self.assertEqual(calls, ["stooq", "nasdaq"])
@@ -136,7 +142,7 @@ class PriceSnapshotTest(unittest.TestCase):
 
         def fake_yahoo(symbol, range_, interval):
             calls.append("yahoo")
-            return {"summary": {"source": "yahoo_chart"}, "raw": {}}
+            return {"summary": {"source": "yahoo_chart", "history_available": True, "history_points": 252}, "raw": {}}
 
         result = fetch_price_snapshot("005930.KS", stooq_fetcher=fake_stooq, nasdaq_fetcher=fake_nasdaq, yahoo_fetcher=fake_yahoo)
 
@@ -145,6 +151,56 @@ class PriceSnapshotTest(unittest.TestCase):
         self.assertEqual(result["_fetch"]["attempts"][1]["provider"], "nasdaq")
         self.assertEqual(result["_fetch"]["attempts"][1]["status"], "skipped")
         self.assertIn("plain US tickers", result["_fetch"]["attempts"][1]["reason"])
+
+    def test_range_request_skips_quote_only_provider_when_history_required(self):
+        calls = []
+
+        def fake_stooq(symbol, range_, interval):
+            calls.append("stooq")
+            return {
+                "summary": {
+                    "source": "stooq_quote_csv",
+                    "history_available": False,
+                    "history_points": 1,
+                },
+                "raw": "csv",
+            }
+
+        def fake_nasdaq(symbol, range_, interval):
+            calls.append("nasdaq")
+            return {
+                "summary": {
+                    "source": "nasdaq_quote",
+                    "history_available": False,
+                    "history_points": 1,
+                },
+                "raw": {},
+            }
+
+        def fake_yahoo(symbol, range_, interval):
+            calls.append("yahoo")
+            return {
+                "summary": {
+                    "source": "yahoo_chart",
+                    "history_available": True,
+                    "history_points": 252,
+                },
+                "raw": {},
+            }
+
+        result = fetch_price_snapshot(
+            "AAPL",
+            "1y",
+            "1d",
+            stooq_fetcher=fake_stooq,
+            nasdaq_fetcher=fake_nasdaq,
+            yahoo_fetcher=fake_yahoo,
+        )
+
+        self.assertEqual(result["summary"]["source"], "yahoo_chart")
+        self.assertEqual(calls, ["stooq", "nasdaq", "yahoo"])
+        self.assertEqual(result["_fetch"]["attempts"][0]["status"], "quote_only")
+        self.assertEqual(result["_fetch"]["attempts"][1]["status"], "quote_only")
 
     def test_maps_plain_us_symbol_to_stooq_us_suffix(self):
         self.assertEqual(yahoo_symbol_to_stooq("AAPL"), "aapl.us")

@@ -164,6 +164,53 @@ class BuildBundleExplicitInputTest(unittest.TestCase):
         self.assertIn("- revenue: 111", text)
         self.assertIn("- latest_close: 123.45", text)
 
+    def test_build_bundle_includes_source_and_valuation_slots(self):
+        from scripts.build_analysis_bundle import build_bundle
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "reports"
+            with unittest.mock.patch("scripts.build_analysis_bundle.now_kst_iso", return_value="2026-05-14T10:00:00+09:00"):
+                with unittest.mock.patch("scripts.build_analysis_bundle.read_json") as read_json_mock:
+                    read_json_mock.side_effect = [
+                        {
+                            "ticker": "AAPL",
+                            "market": "US",
+                            "source": "sec_companyfacts",
+                            "cik": "0000320193",
+                            "periods": [{"year": 2024, "free_cash_flow": 108807000000}],
+                        },
+                        {
+                            "_fetch": {
+                                "source_url": "https://stooq.com/q/l/?s=aapl.us&f=sd2t2ohlcv&h=&e=csv",
+                                "provider": "stooq",
+                            },
+                            "summary": {
+                                "latest_close": 123.45,
+                                "history_available": False,
+                                "history_points": 1,
+                            },
+                        },
+                    ]
+                    output = build_bundle(
+                        "AAPL",
+                        output_dir=output_dir,
+                        financials_path="explicit_financials.json",
+                        price_path="explicit_price.json",
+                    )
+
+            text = output.read_text(encoding="utf-8")
+
+        self.assertIn("## Filing Sources", text)
+        self.assertIn("- financial_source: sec_companyfacts", text)
+        self.assertIn("- cik: 0000320193", text)
+        self.assertIn("- price_source_url: https://stooq.com/q/l/?s=aapl.us&f=sd2t2ohlcv&h=&e=csv", text)
+        self.assertIn("## Valuation Slots", text)
+        self.assertIn("- trailing_pe: missing", text)
+        self.assertIn("- fcf_yield: missing", text)
+        self.assertIn("## Source Gaps", text)
+        self.assertIn("- valuation ratios require external/primary market-cap or enterprise-value source", text)
+        self.assertIn("- price history is quote-only; range return/drawdown needs history-capable provider", text)
+
 
 if __name__ == "__main__":
     unittest.main()

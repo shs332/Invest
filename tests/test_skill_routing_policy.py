@@ -37,11 +37,24 @@ class SkillRoutingPolicyTest(unittest.TestCase):
         self.assertIn("us-stock-return-opportunity", text)
         self.assertIn("risk-management verdict controls the final action label", text.lower())
 
+    def test_etf_questions_route_to_project_etf_skill(self):
+        agents_text = self.read("AGENTS.md")
+        skill_text = self.read(".agents/skills/etf-analysis-review/SKILL.md")
+
+        self.assertIn("use `etf-analysis-review`", agents_text)
+        self.assertIn("ETF Analysis Review", skill_text)
+        self.assertIn("holdings", skill_text.lower())
+        self.assertIn("NAV", skill_text)
+        self.assertIn("expense ratio", skill_text.lower())
+        self.assertIn("tracking", skill_text.lower())
+        self.assertIn("Do not run company financial-statement workflows", skill_text)
+
     def test_documented_skill_commands_match_repo_cli(self):
         skill_paths = [
             ".agents/skills/us-stock-decision-workflow/SKILL.md",
             ".agents/skills/us-stock-return-opportunity/SKILL.md",
             ".agents/skills/kr-stock-analysis-review/SKILL.md",
+            ".agents/skills/etf-analysis-review/SKILL.md",
         ]
         commands: list[tuple[str, list[str]]] = []
         for skill_path in skill_paths:
