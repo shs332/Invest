@@ -5,6 +5,7 @@
 - Always state the base date in Seoul time for current market data.
 - Keep analysis balanced and risk-aware: downside control, valuation heat checks, cash as a valid position, no leverage by default, and no averaging down unless the original thesis still holds.
 - Prefer the local `uv run python scripts/...` pipeline before ad hoc analysis when a relevant fetch/normalize script exists.
+- For ETF judgment, comparison, price-move, holdings, NAV, expense, tracking, dividend/yield, leveraged ETF, or inverse ETF questions, use `etf-analysis-review`; do not force ETF questions through company financial-statement workflows.
 - For US stock judgment, use project-owned `us-stock-decision-workflow` first; treat external `us-stock-analysis` only as a supplemental checklist.
 - Default investment workflow is evidence-first risk/reward assessment.
 - For return-seeking US stock analysis, use `us-stock-return-opportunity` when the user explicitly asks for upside, growth, momentum, alpha, aggressive opportunity, rerating, or catalyst-driven buying.
