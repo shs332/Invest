@@ -70,6 +70,8 @@ def summarize_stooq_csv(csv_text: str, symbol: str) -> dict:
         "min_close": min(closes),
         "latest_volume": volumes[-1] if volumes else None,
         "points": len(closes),
+        "history_available": len(closes) > 1,
+        "history_points": len(closes),
     }
 
 
@@ -93,6 +95,8 @@ def summarize_stooq_quote_csv(csv_text: str, symbol: str) -> dict:
         "min_close": _parse_number(row.get("Low")),
         "latest_volume": _parse_int(row.get("Volume")),
         "points": 1,
+        "history_available": False,
+        "history_points": 1,
     }
 
 
@@ -120,6 +124,8 @@ def summarize_nasdaq_quote(raw: dict, symbol: str) -> dict:
         "min_close": low,
         "latest_volume": _parse_int(primary.get("volume")),
         "points": 1,
+        "history_available": False,
+        "history_points": 1,
     }
 
 
@@ -143,6 +149,8 @@ def summarize_yahoo_chart(raw: dict, symbol: str) -> dict:
         "min_close": min(closes) if closes else None,
         "latest_volume": volumes[-1] if volumes else None,
         "points": len(closes),
+        "history_available": len(closes) > 1,
+        "history_points": len(closes),
     }
 
 
@@ -190,6 +198,11 @@ def fetch_nasdaq_price_snapshot(symbol: str, range_: str = "1y", interval: str =
     }
 
 
+def requires_history(range_: str) -> bool:
+    normalized = range_.strip().lower()
+    return normalized not in {"", "latest", "quote", "1d"}
+
+
 def fetch_price_snapshot(
     symbol: str,
     range_: str = "1y",
@@ -217,6 +230,14 @@ def fetch_price_snapshot(
             data = fetcher(symbol, range_, interval)
         except Exception as exc:
             attempts.append({"provider": provider, "error": str(exc)})
+            continue
+        summary = data.get("summary", {})
+        if requires_history(range_) and not summary.get("history_available"):
+            attempts.append({
+                "provider": provider,
+                "status": "quote_only",
+                "reason": f"range={range_} requires history but provider returned {summary.get('history_points', 0)} point(s)",
+            })
             continue
         data.setdefault("_fetch", {})
         data["_fetch"]["attempts"] = attempts + [{"provider": provider, "status": "ok"}]
