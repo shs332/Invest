@@ -7,6 +7,8 @@ description: Use when the user asks for US stock investment judgment, company an
 
 Purpose: make the project-local evidence pipeline the primary engine for US stock analysis, while using the external `us-stock-analysis` skill only as a supplemental checklist.
 
+Public Equity Investing plugin is also supplemental for this workflow. Use it only after local evidence and primary-source checks when the user needs an institutional-style artifact such as a tearsheet, earnings report, comps/DCF package, memo, pitch, scenario, or QC review. It must not override this project's labels, source hierarchy, position sizing, or risk controls.
+
 ## Mode Routing
 
 ### Default Mode
@@ -22,8 +24,11 @@ Risk-management verdict controls the final action label. The return-seeking view
 ## Priority Order
 
 1. State base date in Seoul time.
+2. Build a portfolio-aware route/context pack when the request names or implies a holding:
+   - `uv run python scripts/build_context_pack.py "<QUESTION>" --ticker <TICKER>`
+   - If current portfolio value, P/L, or weights matter, compute them after fresh prices/FX with `uv run python scripts/portfolio_snapshot.py`.
 2. Use local artifacts and scripts first when available:
-   - `uv run python scripts/update_company_bundle.py <TICKER> --market US`
+   - `uv run python scripts/update_asset_bundle.py <TICKER> --market US --asset-type stock`
 3. If orchestration is not enough, run the pipeline manually:
    - `uv run python scripts/fetch_sec_companyfacts.py <TICKER>`
    - `uv run python scripts/normalize_financials.py --source sec --ticker <TICKER> --input <RAW_JSON>`

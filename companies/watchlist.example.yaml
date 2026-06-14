@@ -1,0 +1,8 @@
+# Copy to companies/watchlist.yaml for local watchlist context.
+# The real file is ignored by git because it can reveal personal research interests.
+
+- ticker: EXAMPLEWATCH
+  market: US
+  name: Example Watchlist Company
+  reason: Example valuation or quality watch.
+  status: watch

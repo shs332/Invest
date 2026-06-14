@@ -1,6 +1,6 @@
 # Verification
 
-Base date: 2026-05-15 KST.
+Base date: 2026-06-14 KST.
 
 Canonical local check:
 

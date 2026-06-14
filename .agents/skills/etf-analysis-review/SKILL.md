@@ -7,6 +7,8 @@ description: Use when the user asks whether an ETF is worth buying, holding, tri
 
 Purpose: analyze ETFs using fund-specific evidence. ETF judgment must not be forced through company financial-statement workflows.
 
+Public Equity Investing plugin can help with ETF/index constituent diligence, PM-style risk framing, scenario analysis, or polished artifacts after ETF issuer and index evidence is checked. It must not replace ETF-specific evidence such as holdings, NAV, expense ratio, tracking, liquidity, distribution policy, leverage/inverse structure, tax, and currency exposure.
+
 ## When To Use
 
 Use for ETFs, funds, index products, sector baskets, bond ETFs, commodity ETFs, dividend ETFs, thematic ETFs, leveraged ETFs, inverse ETFs, and Korea-listed ETFs.
@@ -16,7 +18,11 @@ Do not run company financial-statement workflows for ETF analysis. For ETFs, hol
 ## Workflow
 
 1. State base date in Seoul time.
+2. Build a portfolio-aware route/context pack when the request names or implies a holding:
+   - `uv run python scripts/build_context_pack.py "<QUESTION>" --ticker <ETF_SYMBOL>`
+   - If current portfolio value, P/L, or weights matter, compute them after fresh prices/FX with `uv run python scripts/portfolio_snapshot.py`.
 2. Fetch price context when useful:
+   - `uv run python scripts/update_asset_bundle.py <ETF_SYMBOL> --market US --asset-type ETF`
    - `uv run python scripts/fetch_price_snapshot.py <ETF_SYMBOL> --range 1y --interval 1d`
 3. Check primary or issuer-level sources first:
    - ETF issuer fund page.

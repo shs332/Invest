@@ -32,3 +32,11 @@ data/reports/**
 !data/raw/.gitkeep
 !data/normalized/.gitkeep
 !data/reports/.gitkeep
+
+# Personal portfolio context; keep templates in git instead.
+companies/portfolio_profile.yaml
+companies/holdings.yaml
+companies/watchlist.yaml
+companies/thesis_tracker.yaml
+memos/*portfolio_context*.md
+!memos/portfolio_context.example.md

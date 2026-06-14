@@ -7,6 +7,8 @@ description: Use when the user asks for US stock upside, growth, momentum, aggre
 
 Purpose: analyze upside potential without bypassing this workspace's evidence and risk rules.
 
+Public Equity Investing plugin may support polished artifacts, valuation framing, scenario work, or pitch structure after this workflow builds local evidence. It must not override project labels, risk gates, invalidation triggers, or position sizing limits.
+
 ## When To Use
 
 Use this skill when the user explicitly asks for:
@@ -31,8 +33,11 @@ If the user asks a generic buy/hold/avoid question, use `us-stock-decision-workf
 ## Workflow
 
 1. State base date in Seoul time.
+2. Build a portfolio-aware route/context pack when the request names or implies a holding:
+   - `uv run python scripts/build_context_pack.py "<QUESTION>" --ticker <TICKER>`
+   - If current portfolio value, P/L, or weights matter, compute them after fresh prices/FX with `uv run python scripts/portfolio_snapshot.py`.
 2. Build or reuse local evidence first:
-   - `uv run python scripts/update_company_bundle.py <TICKER> --market US`
+   - `uv run python scripts/update_asset_bundle.py <TICKER> --market US --asset-type stock`
 3. If orchestration is not enough, run the pipeline manually:
    - `uv run python scripts/fetch_sec_companyfacts.py <TICKER>`
    - `uv run python scripts/normalize_financials.py --source sec --ticker <TICKER> --input <RAW_JSON>`

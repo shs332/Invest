@@ -1,0 +1,27 @@
+# Copy to companies/thesis_tracker.yaml for local thesis and catalyst tracking.
+# The real file is ignored by git because it can contain personal decisions and action logs.
+
+as_of: 2026-06-14
+timezone: Asia/Seoul
+policy:
+  source_of_truth_for_positions: companies/holdings.yaml
+  append_only_by_default: true
+  do_not_change_trade_facts_without_user_update: true
+  local_action_labels:
+    - Buy
+    - Watch
+    - Hold
+    - Trim
+    - Avoid
+    - Increase Cash
+  public_equity_investing_action_map:
+    add: Buy
+    press: Buy
+    hold: Hold
+    trim: Trim
+    exit: Avoid
+    hedge: Watch
+    wait_for_proof: Watch
+    re_underwrite: Watch
+
+entries: []

@@ -7,6 +7,8 @@ description: Use when the user asks for Korean listed stock analysis, DART finan
 
 Purpose: adapt the US stock analysis workflow to Korean listed companies while preserving this workspace's risk-aware investment rules.
 
+Public Equity Investing plugin can be used after DART/KRX/KIND/issuer evidence is gathered for report structure, valuation framing, scenario work, or polished artifacts. It must not let US-market defaults, missing consensus, or missing market-data connectors replace Korea-specific evidence or local final labels.
+
 ## When To Use
 
 Use for Korean common stocks, preferred shares, KOSPI/KOSDAQ names, chaebol subsidiaries, holding companies, banks, insurers, REITs, and Korean dividend/value/growth stock questions.
@@ -16,9 +18,13 @@ Do not use for Korean ETFs. Use or create an ETF-specific workflow for those bec
 ## Workflow
 
 1. State base date in Seoul time.
+2. Build a portfolio-aware route/context pack when the request names or implies a holding:
+   - `uv run python scripts/build_context_pack.py "<QUESTION>" --ticker <TICKER>`
+   - If current portfolio value, P/L, or weights matter, compute them after fresh prices/FX with `uv run python scripts/portfolio_snapshot.py`.
 2. Resolve the company when needed:
    - `uv run python scripts/resolve_company.py "<ticker-or-name>" --market KR`
 3. Prefer the local pipeline when possible:
+   - `uv run python scripts/update_asset_bundle.py <TICKER>.KS --market KR --asset-type stock --corp-code <CORP_CODE>`
    - `uv run python scripts/fetch_dart_financials.py <CORP_CODE> --ticker <TICKER> --year <YYYY>`
    - `uv run python scripts/normalize_financials.py --source dart --ticker <TICKER> --input <RAW_JSON>`
    - `uv run python scripts/fetch_price_snapshot.py <TICKER>.KS --range 1y --interval 1d`

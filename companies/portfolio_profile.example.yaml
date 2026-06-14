@@ -1,0 +1,48 @@
+# Copy to companies/portfolio_profile.yaml for local portfolio-aware answers.
+# The real file is ignored by git because it can contain personal financial data.
+
+as_of: 2026-06-14
+timezone: Asia/Seoul
+source: local_user_input
+
+total_assets_krw: 100000000
+
+investment_assets:
+  korean_assets_krw: 50000000
+  us_assets_usd: 10000
+
+cash:
+  total_cash_krw: 25000000
+  isa_cash_krw: 5000000
+
+accounts:
+  taxable_brokerage:
+    note: Main taxable account.
+  isa:
+    total_value_krw: 10000000
+    cash_krw: 5000000
+    holdings:
+      - 069500.KS
+  us_brokerage:
+    holdings:
+      - EXAMPLEUS
+
+other_assets: {}
+
+cash_flow:
+  monthly_new_investment_krw: 1000000
+  liquidity_need_within_1y: none_reported
+
+portfolio_policy:
+  horizon: current_portfolio_first
+  risk_mode: evidence_first_risk_reward
+  holdings_source_of_truth: companies/holdings.yaml
+  cash_is_valid_position: true
+  no_leverage_by_default: true
+  no_averaging_down_unless_thesis_still_holds: true
+  prefer_position_aware_answers: true
+  avoid_reasking_known_portfolio_context: true
+  refresh_market_data_before_current_judgment: true
+  compute_current_value_and_pnl_on_demand: true
+  user_updates_required_for_trades: true
+  do_not_change_shares_or_avg_price_without_explicit_user_update: true

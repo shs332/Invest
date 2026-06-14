@@ -7,6 +7,8 @@ description: Use when the user asks whether a stock or ETF is worth buying, hold
 
 Purpose: turn evidence into disciplined risk/reward decision support. No return guarantees.
 
+This is the final local action-label layer for this repo. External plugins, including Public Equity Investing, may improve source review, valuation framing, artifacts, or QC, but they must not override the final conditional label, execution rules, or risk controls.
+
 ## Default Assumptions
 
 - Horizon: mid- to long-term, 3 to 12 months or longer.
@@ -16,11 +18,13 @@ Purpose: turn evidence into disciplined risk/reward decision support. No return 
 ## Workflow
 
 1. State base date in Seoul time.
-2. If normalized data exists, build a local bundle first:
+2. If the question is portfolio-aware, read the portfolio files and use `uv run python scripts/portfolio_snapshot.py` after fresh prices/FX are available to compute current value, P/L, and weights.
+3. If normalized data exists, build a local bundle first:
    - `uv run python scripts/build_analysis_bundle.py <TICKER>`
-3. Summarize thesis in 3 lines.
-4. Select 8-12 indicators appropriate to sector. Do not force irrelevant metrics.
-5. Cover at least:
+4. Check `companies/thesis_tracker.yaml` for stored thesis/catalyst/action-log scaffolding when the user asks for ongoing tracking or update persistence.
+5. Summarize thesis in 3 lines.
+6. Select 8-12 indicators appropriate to sector. Do not force irrelevant metrics.
+7. Cover at least:
    - Price context: 1M, 3M, 1Y returns, drawdown/volatility if useful.
    - Valuation: trailing/forward P/E, P/B, EV/EBITDA, FCF yield, or sector-specific alternative.
    - Quality: revenue growth, margins, ROE/ROIC, FCF margin.

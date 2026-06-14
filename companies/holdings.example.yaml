@@ -1,0 +1,22 @@
+# Copy to companies/holdings.yaml for local portfolio-aware answers.
+# The real file is ignored by git because it can contain positions, cost basis, and thesis notes.
+
+- ticker: EXAMPLEUS
+  market: US
+  name: Example US Company
+  asset_type: stock
+  account: us_brokerage
+  shares: 2
+  avg_price: 100
+  currency: USD
+  thesis: Example thesis placeholder.
+
+- ticker: 069500.KS
+  market: KR
+  name: KODEX 200
+  asset_type: ETF
+  account: isa
+  shares: 10
+  avg_price: 30000
+  currency: KRW
+  thesis: Example diversified ETF placeholder.

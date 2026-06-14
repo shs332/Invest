@@ -49,6 +49,46 @@ class SkillRoutingPolicyTest(unittest.TestCase):
         self.assertIn("tracking", skill_text.lower())
         self.assertIn("Do not run company financial-statement workflows", skill_text)
 
+    def test_public_equity_investing_is_supplemental_not_primary(self):
+        agents_text = self.read("AGENTS.md")
+        readme_text = self.read("README.md")
+
+        for text in (agents_text, readme_text):
+            self.assertIn("Public Equity Investing", text)
+            self.assertIn("supplemental", text.lower())
+            self.assertIn("must not override", text.lower())
+            self.assertIn("local", text.lower())
+
+        self.assertIn("final action labels", agents_text)
+        self.assertIn("screen-grade", readme_text)
+        self.assertIn("Korean equities", readme_text)
+
+    def test_context_pack_and_unified_bundle_are_documented(self):
+        agents_text = self.read("AGENTS.md")
+        readme_text = self.read("README.md")
+
+        for text in (agents_text, readme_text):
+            self.assertIn("build_context_pack.py", text)
+            self.assertIn("portfolio_snapshot.py", text)
+            self.assertIn("update_asset_bundle.py", text)
+
+        self.assertIn("Inline answer by default", readme_text)
+        self.assertIn("companies/thesis_tracker.yaml", readme_text)
+
+    def test_project_skills_preserve_local_decision_control(self):
+        skill_paths = [
+            ".agents/skills/us-stock-decision-workflow/SKILL.md",
+            ".agents/skills/us-stock-return-opportunity/SKILL.md",
+            ".agents/skills/kr-stock-analysis-review/SKILL.md",
+            ".agents/skills/etf-analysis-review/SKILL.md",
+            ".agents/skills/risk-manager-investment-memo/SKILL.md",
+        ]
+
+        for skill_path in skill_paths:
+            text = self.read(skill_path)
+            self.assertIn("Public Equity Investing", text, skill_path)
+            self.assertIn("must not", text.lower(), skill_path)
+
     def test_documented_skill_commands_match_repo_cli(self):
         skill_paths = [
             ".agents/skills/us-stock-decision-workflow/SKILL.md",
@@ -59,7 +99,7 @@ class SkillRoutingPolicyTest(unittest.TestCase):
         commands: list[tuple[str, list[str]]] = []
         for skill_path in skill_paths:
             text = self.read(skill_path)
-            self.assertNotIn("scripts/update_asset_bundle.py", text)
+            self.assertNotIn("scripts/update_asset_bundle.py <TICKER> --market KR", text)
             self.assertNotIn("--mode history", text)
             self.assertNotIn("--dated", text)
             for match in re.finditer(r"`uv run python (scripts/[^`]+)`", text):
