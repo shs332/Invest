@@ -111,6 +111,17 @@ holdings:
         self.assertIn("scripts/update_asset_bundle.py EXAMPLEUS --market US --asset-type stock", pack["route"]["local_scripts"][0])
         self.assertEqual(pack["public_equity_investing"]["role"], "supplemental")
 
+    def test_context_pack_routes_korean_return_seeking_us_stock_question(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_project_files(root)
+
+            pack = build_context_pack("EXAMPLEUS 수익률 위주로 공격적으로 볼 만해?", root=root)
+
+        self.assertTrue(pack["portfolio_aware"])
+        self.assertEqual(pack["matched_security"]["ticker"], "EXAMPLEUS")
+        self.assertEqual(pack["route"]["primary_skill"], "us-stock-return-opportunity")
+
     def test_context_pack_routes_etf_and_price_move_questions(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

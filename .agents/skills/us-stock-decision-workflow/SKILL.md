@@ -25,15 +25,15 @@ Risk-management verdict controls the final action label. The return-seeking view
 
 1. State base date in Seoul time.
 2. Build a portfolio-aware route/context pack when the request names or implies a holding:
-   - `uv run python scripts/build_context_pack.py "<QUESTION>" --ticker <TICKER>`
-   - If current portfolio value, P/L, or weights matter, compute them after fresh prices/FX with `uv run python scripts/portfolio_snapshot.py`.
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/build_context_pack.py "<QUESTION>" --ticker <TICKER>`
+   - If current portfolio value, P/L, or weights matter, compute them after fresh prices/FX with `UV_CACHE_DIR=.uv-cache uv run python scripts/portfolio_snapshot.py`.
 2. Use local artifacts and scripts first when available:
-   - `uv run python scripts/update_asset_bundle.py <TICKER> --market US --asset-type stock`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/update_asset_bundle.py <TICKER> --market US --asset-type stock`
 3. If orchestration is not enough, run the pipeline manually:
-   - `uv run python scripts/fetch_sec_companyfacts.py <TICKER>`
-   - `uv run python scripts/normalize_financials.py --source sec --ticker <TICKER> --input <RAW_JSON>`
-   - `uv run python scripts/fetch_price_snapshot.py <TICKER> --range 1y --interval 1d`
-   - `uv run python scripts/build_analysis_bundle.py <TICKER>`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/fetch_sec_companyfacts.py <TICKER>`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/normalize_financials.py --source sec --ticker <TICKER> --input <RAW_JSON>`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/fetch_price_snapshot.py <TICKER> --range 1y --interval 1d`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/build_analysis_bundle.py <TICKER>`
 4. Check primary sources:
    - SEC 10-K, 10-Q, 8-K.
    - Company IR, earnings release, shareholder letter, transcript if needed.

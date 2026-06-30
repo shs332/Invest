@@ -39,6 +39,8 @@ def ensure_sec_cache(path: Path = DEFAULT_SEC_CACHE, refresh: bool = False) -> P
 def ensure_dart_cache(path: Path = DEFAULT_DART_CACHE, refresh: bool = False, api_key: str | None = None) -> Path:
     if path.exists() and not refresh:
         return path
+    if api_key is None:
+        load_project_env()
     key = api_key or os.environ.get("OPENDART_API_KEY") or os.environ.get("DART_API_KEY")
     if not key:
         raise SystemExit("Missing OPENDART_API_KEY or DART_API_KEY environment variable.")

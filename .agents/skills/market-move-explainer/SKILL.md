@@ -11,7 +11,7 @@ Purpose: explain recent price movement without overclaiming causality.
 
 1. State base date in Seoul time.
 2. If possible, fetch price context first:
-   - `uv run python scripts/fetch_price_snapshot.py <YAHOO_SYMBOL>`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/fetch_price_snapshot.py <YAHOO_SYMBOL>`
    - Examples: `AAPL`, `005930.KS`
 3. Confirm the move: ticker, market, current/last price, 1D, 1M, 3M, and 1Y return when relevant.
 4. Search recent primary sources first: filings, earnings releases, IR, exchange notices, company announcements.

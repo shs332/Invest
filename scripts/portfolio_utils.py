@@ -195,5 +195,20 @@ def is_price_move_question(query: str) -> bool:
 
 def is_return_seeking_question(query: str) -> bool:
     lowered = query.casefold()
-    keywords = ["upside", "growth", "momentum", "alpha", "aggressive", "rerating", "catalyst", "성장", "모멘텀"]
+    keywords = [
+        "upside",
+        "growth",
+        "momentum",
+        "alpha",
+        "aggressive",
+        "rerating",
+        "catalyst",
+        "성장",
+        "모멘텀",
+        "수익률",
+        "공격",
+        "고수익",
+        "상승여력",
+        "알파",
+    ]
     return any(keyword in lowered for keyword in keywords)

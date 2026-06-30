@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest.mock import patch
 
@@ -104,6 +105,28 @@ class NormalizeFinancialsTest(unittest.TestCase):
 
         self.assertEqual(result["status"], "013")
         self.assertEqual(result["_fetch"]["corp_code"], "00126380")
+
+    def test_fetch_dart_loads_project_env_when_called_as_function(self):
+        raw = {"status": "013", "message": "조회된 데이타가 없습니다."}
+        previous = os.environ.get("OPENDART_API_KEY")
+        os.environ.pop("OPENDART_API_KEY", None)
+
+        def load_env() -> dict[str, str]:
+            os.environ["OPENDART_API_KEY"] = "from-env-file"
+            return {"OPENDART_API_KEY": "from-env-file"}
+
+        try:
+            with patch("scripts.fetch_dart_financials.load_project_env", side_effect=load_env):
+                with patch("scripts.fetch_dart_financials.http_json", return_value=raw) as http_json:
+                    fetch_dart_financials("00126380", 2026, "11013", allow_empty=True)
+        finally:
+            if previous is None:
+                os.environ.pop("OPENDART_API_KEY", None)
+            else:
+                os.environ["OPENDART_API_KEY"] = previous
+
+        requested_url = http_json.call_args.args[0]
+        self.assertIn("crtfc_key=from-env-file", requested_url)
 
 
 if __name__ == "__main__":

@@ -12,11 +12,11 @@ Purpose: judge financial quality and durability before valuation or investment m
 1. State base date in Seoul time and source period.
 2. Use local pipeline when possible:
    - Resolve identifier first when missing:
-     - US: `uv run python scripts/resolve_company.py "<ticker-or-company-name>" --market US`
-     - Korea: `uv run python scripts/resolve_company.py "<ticker-or-company-name>" --market KR`
-   - US: `uv run python scripts/fetch_sec_companyfacts.py <TICKER>`
-   - Korea: `uv run python scripts/fetch_dart_financials.py <CORP_CODE> --ticker <TICKER> --year <YYYY>`
-   - Normalize: `uv run python scripts/normalize_financials.py --source sec|dart --ticker <TICKER> --input <RAW_JSON>`
+     - US: `UV_CACHE_DIR=.uv-cache uv run python scripts/resolve_company.py "<ticker-or-company-name>" --market US`
+     - Korea: `UV_CACHE_DIR=.uv-cache uv run python scripts/resolve_company.py "<ticker-or-company-name>" --market KR`
+   - US: `UV_CACHE_DIR=.uv-cache uv run python scripts/fetch_sec_companyfacts.py <TICKER>`
+   - Korea: `UV_CACHE_DIR=.uv-cache uv run python scripts/fetch_dart_financials.py <CORP_CODE> --ticker <TICKER> --year <YYYY>`
+   - Normalize: `UV_CACHE_DIR=.uv-cache uv run python scripts/normalize_financials.py --source sec|dart --ticker <TICKER> --input <RAW_JSON>`
 3. Use primary filings when possible:
    - US: SEC 10-K, 10-Q, 8-K, earnings release, IR deck.
    - Korea: DART annual/quarterly/semiannual report, IR release, earnings announcement.

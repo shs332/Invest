@@ -18,9 +18,9 @@ This is the final local action-label layer for this repo. External plugins, incl
 ## Workflow
 
 1. State base date in Seoul time.
-2. If the question is portfolio-aware, read the portfolio files and use `uv run python scripts/portfolio_snapshot.py` after fresh prices/FX are available to compute current value, P/L, and weights.
+2. If the question is portfolio-aware, read the portfolio files and use `UV_CACHE_DIR=.uv-cache uv run python scripts/portfolio_snapshot.py` after fresh prices/FX are available to compute current value, P/L, and weights.
 3. If normalized data exists, build a local bundle first:
-   - `uv run python scripts/build_analysis_bundle.py <TICKER>`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/build_analysis_bundle.py <TICKER>`
 4. Check `companies/thesis_tracker.yaml` for stored thesis/catalyst/action-log scaffolding when the user asks for ongoing tracking or update persistence.
 5. Summarize thesis in 3 lines.
 6. Select 8-12 indicators appropriate to sector. Do not force irrelevant metrics.

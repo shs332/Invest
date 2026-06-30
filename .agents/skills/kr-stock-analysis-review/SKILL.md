@@ -19,15 +19,15 @@ Do not use for Korean ETFs. Use or create an ETF-specific workflow for those bec
 
 1. State base date in Seoul time.
 2. Build a portfolio-aware route/context pack when the request names or implies a holding:
-   - `uv run python scripts/build_context_pack.py "<QUESTION>" --ticker <TICKER>`
-   - If current portfolio value, P/L, or weights matter, compute them after fresh prices/FX with `uv run python scripts/portfolio_snapshot.py`.
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/build_context_pack.py "<QUESTION>" --ticker <TICKER>`
+   - If current portfolio value, P/L, or weights matter, compute them after fresh prices/FX with `UV_CACHE_DIR=.uv-cache uv run python scripts/portfolio_snapshot.py`.
 2. Resolve the company when needed:
-   - `uv run python scripts/resolve_company.py "<ticker-or-name>" --market KR`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/resolve_company.py "<ticker-or-name>" --market KR`
 3. Prefer the local pipeline when possible:
-   - `uv run python scripts/update_asset_bundle.py <TICKER>.KS --market KR --asset-type stock --corp-code <CORP_CODE>`
-   - `uv run python scripts/fetch_dart_financials.py <CORP_CODE> --ticker <TICKER> --year <YYYY>`
-   - `uv run python scripts/normalize_financials.py --source dart --ticker <TICKER> --input <RAW_JSON>`
-   - `uv run python scripts/fetch_price_snapshot.py <TICKER>.KS --range 1y --interval 1d`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/update_asset_bundle.py <TICKER>.KS --market KR --asset-type stock --corp-code <CORP_CODE>`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/fetch_dart_financials.py <CORP_CODE> --ticker <TICKER> --year <YYYY>`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/normalize_financials.py --source dart --ticker <TICKER> --input <RAW_JSON>`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/fetch_price_snapshot.py <TICKER>.KS --range 1y --interval 1d`
 4. Use primary sources first:
    - DART annual, semiannual, quarterly reports.
    - DART current reports and major matters reports.

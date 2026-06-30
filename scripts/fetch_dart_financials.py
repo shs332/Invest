@@ -23,6 +23,8 @@ def fetch_dart_financials(
     api_key: str | None = None,
     allow_empty: bool = False,
 ) -> dict:
+    if api_key is None:
+        load_project_env()
     key = api_key or os.environ.get("OPENDART_API_KEY") or os.environ.get("DART_API_KEY")
     if not key:
         raise SystemExit("Missing OPENDART_API_KEY or DART_API_KEY environment variable.")

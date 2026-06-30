@@ -14,6 +14,7 @@ Public Equity Investing plugin may support polished artifacts, valuation framing
 Use this skill when the user explicitly asks for:
 
 - upside, return potential, alpha, growth, momentum, or aggressive opportunity;
+- Korean return-first wording such as 수익률 위주, 공격적, 고수익, 상승여력, or 알파;
 - catalyst-driven entry;
 - valuation rerating;
 - high-conviction candidate comparison;
@@ -34,15 +35,15 @@ If the user asks a generic buy/hold/avoid question, use `us-stock-decision-workf
 
 1. State base date in Seoul time.
 2. Build a portfolio-aware route/context pack when the request names or implies a holding:
-   - `uv run python scripts/build_context_pack.py "<QUESTION>" --ticker <TICKER>`
-   - If current portfolio value, P/L, or weights matter, compute them after fresh prices/FX with `uv run python scripts/portfolio_snapshot.py`.
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/build_context_pack.py "<QUESTION>" --ticker <TICKER>`
+   - If current portfolio value, P/L, or weights matter, compute them after fresh prices/FX with `UV_CACHE_DIR=.uv-cache uv run python scripts/portfolio_snapshot.py`.
 2. Build or reuse local evidence first:
-   - `uv run python scripts/update_asset_bundle.py <TICKER> --market US --asset-type stock`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/update_asset_bundle.py <TICKER> --market US --asset-type stock`
 3. If orchestration is not enough, run the pipeline manually:
-   - `uv run python scripts/fetch_sec_companyfacts.py <TICKER>`
-   - `uv run python scripts/normalize_financials.py --source sec --ticker <TICKER> --input <RAW_JSON>`
-   - `uv run python scripts/fetch_price_snapshot.py <TICKER> --range 1y --interval 1d`
-   - `uv run python scripts/build_analysis_bundle.py <TICKER>`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/fetch_sec_companyfacts.py <TICKER>`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/normalize_financials.py --source sec --ticker <TICKER> --input <RAW_JSON>`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/fetch_price_snapshot.py <TICKER> --range 1y --interval 1d`
+   - `UV_CACHE_DIR=.uv-cache uv run python scripts/build_analysis_bundle.py <TICKER>`
 4. Check primary sources:
    - SEC 10-K, 10-Q, 8-K.
    - Company IR, earnings release, shareholder letter, guidance, and transcript if needed.
@@ -61,6 +62,7 @@ If the user asks a generic buy/hold/avoid question, use `us-stock-decision-workf
 - Do not override project labels, source hierarchy, or risk controls.
 - Do not use target price or analyst rating as proof.
 - Do not recommend leverage by default.
+- Do not treat young age or a small seed as permission for leverage, all-in concentration, or weak evidence. It can justify a risk-aware growth tilt only after liquidity needs and drawdown tolerance are considered.
 - Do not average down unless thesis, cash flow, balance sheet, and valuation still support it.
 - Every opportunity call must include downside case, invalidation trigger, and position sizing.
 - If local or primary data is missing, mark analysis incomplete.

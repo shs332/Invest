@@ -8,6 +8,8 @@ This repo is a local, user-initiated investment research workspace. It supports 
 - Use primary sources first: SEC, DART, company IR, issuer ETF pages, exchange data, central bank data.
 - Use news only as context after primary facts are checked.
 - Keep outputs risk-aware: downside control, valuation heat checks, cash as a valid position, no leverage by default.
+- A young or long-horizon investor with a modest seed can reasonably use a higher expected-return tilt, but this repo treats that as a risk-aware growth tilt rather than permission for leverage, all-in concentration, or weaker evidence.
+- For aggressive or return-first prompts, state the upside driver, evidence quality, downside case, position size/cap, and invalidation trigger.
 - Store generated raw data under `data/raw/`, normalized data under `data/normalized/`, report bundles under `data/reports/`, and final memos under `memos/`.
 
 ## Which Question Uses Which Skill/Script
@@ -16,7 +18,7 @@ This repo is a local, user-initiated investment research workspace. It supports 
 |---|---|---|---|
 | Any named security question | Routed project skill | `uv run python scripts/build_context_pack.py "<QUESTION>"` | Portfolio-aware route, matched holding/watchlist, PEI role |
 | US stock buy/hold/avoid | `us-stock-decision-workflow` | `uv run python scripts/update_asset_bundle.py <TICKER> --market US --asset-type stock` | `data/reports/<TICKER>_<DATE>_bundle.md` |
-| US stock upside/growth/momentum | `us-stock-return-opportunity` | Same unified US bundle command first | Return-opportunity memo with risk-management final label |
+| US stock upside/growth/momentum/aggressive return | `us-stock-return-opportunity` | Same unified US bundle command first | Return-opportunity memo with risk-management final label |
 | Korean stock analysis | `kr-stock-analysis-review` | `uv run python scripts/update_asset_bundle.py <TICKER>.KS --market KR --asset-type stock --corp-code <CORP_CODE>` | DART/price/report bundle when source access is available |
 | ETF judgment/comparison | `etf-analysis-review` | `uv run python scripts/update_asset_bundle.py <ETF> --market US|KR --asset-type ETF` plus issuer/primary sources for holdings, NAV, expense, tracking | ETF-specific risk/reward memo |
 | Price move explanation | `market-move-explainer` | `fetch_price_snapshot.py <SYMBOL> --range 1y --interval 1d` | Move summary with confirmed/likely/unclear evidence split |

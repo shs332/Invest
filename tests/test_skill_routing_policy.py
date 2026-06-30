@@ -37,6 +37,19 @@ class SkillRoutingPolicyTest(unittest.TestCase):
         self.assertIn("us-stock-return-opportunity", text)
         self.assertIn("risk-management verdict controls the final action label", text.lower())
 
+    def test_young_investor_return_tilt_keeps_risk_gates(self):
+        agents_text = self.read("AGENTS.md")
+        readme_text = self.read("README.md")
+        skill_text = self.read(".agents/skills/us-stock-return-opportunity/SKILL.md")
+
+        for text in (agents_text, readme_text, skill_text):
+            self.assertIn("risk-aware growth tilt", text)
+
+        self.assertIn("수익률 위주", agents_text)
+        self.assertIn("position size/cap", agents_text)
+        self.assertIn("small seed", skill_text)
+        self.assertIn("weak evidence", skill_text)
+
     def test_etf_questions_route_to_project_etf_skill(self):
         agents_text = self.read("AGENTS.md")
         skill_text = self.read(".agents/skills/etf-analysis-review/SKILL.md")
@@ -102,7 +115,7 @@ class SkillRoutingPolicyTest(unittest.TestCase):
             self.assertNotIn("scripts/update_asset_bundle.py <TICKER> --market KR", text)
             self.assertNotIn("--mode history", text)
             self.assertNotIn("--dated", text)
-            for match in re.finditer(r"`uv run python (scripts/[^`]+)`", text):
+            for match in re.finditer(r"`(?:UV_CACHE_DIR=.uv-cache )?uv run python (scripts/[^`]+)`", text):
                 parts = match.group(1).split()
                 commands.append((parts[0], [part for part in parts[1:] if part.startswith("--")]))
 
