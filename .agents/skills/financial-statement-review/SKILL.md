@@ -17,6 +17,7 @@ Purpose: judge financial quality and durability before valuation or investment m
    - US: `UV_CACHE_DIR=.uv-cache uv run python scripts/fetch_sec_companyfacts.py <TICKER>`
    - Korea: `UV_CACHE_DIR=.uv-cache uv run python scripts/fetch_dart_financials.py <CORP_CODE> --ticker <TICKER> --year <YYYY>`
    - Normalize: `UV_CACHE_DIR=.uv-cache uv run python scripts/normalize_financials.py --source sec|dart --ticker <TICKER> --input <RAW_JSON>`
+   - DART commands and function-call paths load the project `.env`; use `OPENDART_API_KEY` or `DART_API_KEY` from there before asking the user for credentials.
 3. Use primary filings when possible:
    - US: SEC 10-K, 10-Q, 8-K, earnings release, IR deck.
    - Korea: DART annual/quarterly/semiannual report, IR release, earnings announcement.

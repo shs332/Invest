@@ -28,6 +28,7 @@ Do not use for Korean ETFs. Use or create an ETF-specific workflow for those bec
    - `UV_CACHE_DIR=.uv-cache uv run python scripts/fetch_dart_financials.py <CORP_CODE> --ticker <TICKER> --year <YYYY>`
    - `UV_CACHE_DIR=.uv-cache uv run python scripts/normalize_financials.py --source dart --ticker <TICKER> --input <RAW_JSON>`
    - `UV_CACHE_DIR=.uv-cache uv run python scripts/fetch_price_snapshot.py <TICKER>.KS --range 1y --interval 1d`
+   - DART scripts load project `.env` credentials in direct CLI and function-call paths; rely on `OPENDART_API_KEY` or `DART_API_KEY` there before asking the user for a key.
 4. Use primary sources first:
    - DART annual, semiannual, quarterly reports.
    - DART current reports and major matters reports.
@@ -142,4 +143,4 @@ Use conditional labels only:
 - No averaging down unless thesis, cash flow, balance sheet, and valuation still support it.
 - Cash is a valid answer.
 - Do not force US metrics when Korean disclosure format does not support them cleanly.
-- If `OPENDART_API_KEY` is missing or provider data fails, say analysis is incomplete instead of filling gaps with guesses.
+- If `OPENDART_API_KEY`/`DART_API_KEY` is absent after loading `.env`, or provider data fails, say analysis is incomplete instead of filling gaps with guesses.

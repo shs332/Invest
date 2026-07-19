@@ -3,6 +3,7 @@
 - For stock, ETF, company, price-move, earnings, or valuation questions, verify recent data with web research before giving a current judgment.
 - Prefer primary sources first: SEC filings, DART filings, IR reports, earnings releases, exchange data, central bank data. Use news only as context after checking primary facts.
 - Always state the base date in Seoul time for current market data.
+- For scheduled market briefs or automations, label the market window by actual execution time; if the run happens after the intended pre-open window, call it early-session, in-session, post-close, or next-session context instead of pretending it is still pre-open.
 - Default operating loop for substantive investment questions:
   1. Build a question context pack with `UV_CACHE_DIR=.uv-cache uv run python scripts/build_context_pack.py "<question>"` when the request names or implies a security.
   2. Refresh or prepare evidence with `UV_CACHE_DIR=.uv-cache uv run python scripts/update_asset_bundle.py <SYMBOL> --market US|KR --asset-type stock|ETF` when a relevant local path exists.
@@ -11,13 +12,17 @@
 - For portfolio-aware questions, read `companies/portfolio_profile.yaml`, `companies/holdings.yaml`, and `companies/watchlist.yaml` before asking the user for position context.
 - Do not ask the user to repeat portfolio facts already recorded in those files unless the data is stale, missing, or internally conflicting.
 - Treat `companies/holdings.yaml` as the user-maintained source of truth for ticker, market, account, asset type, shares, average price, currency, and thesis. Compute current value, P/L, and portfolio weights on demand from fresh market data.
+- Never persist unrealized return percentages for open positions. Keep realized returns for closed trades, and compute open-position P/L from fresh prices and recorded average prices.
 - Do not change recorded shares or average price unless the user explicitly reports a buy, sell, transfer, split adjustment, or correction.
 - Treat recorded portfolio files as user-provided context, not live market data. Still verify recent prices, filings, issuer data, and disclosures before current buy/hold/trim/avoid judgments.
+- When local price-history providers fail or an asset bundle is quote-only/stale, use a fresh external quote only for current sizing/weight calculations and explicitly mark range returns, drawdowns, and price-history metrics as incomplete.
 - Keep analysis balanced and risk-aware: downside control, valuation heat checks, cash as a valid position, no leverage by default, and no averaging down unless the original thesis still holds.
 - For a young or long-horizon investor with a modest seed, treat a higher expected-return tilt as reasonable only when liquidity needs and drawdown tolerance support it.
 - Translate that profile into a risk-aware growth tilt, not leverage or all-in concentration: keep emergency/liquidity cash and broad core exposure separate from single-stock or thematic satellites.
 - For aggressive or return-first prompts, require the answer to state the upside driver, evidence quality, downside case, position size/cap, and invalidation trigger.
 - Prefer the local `UV_CACHE_DIR=.uv-cache uv run python scripts/...` pipeline before ad hoc analysis when a relevant fetch/normalize script exists. Use the project-local uv cache so Codex sandbox runs do not depend on home-directory cache writes.
+- DART-related scripts load the project `.env` when they need credentials. Prefer recorded `OPENDART_API_KEY` or `DART_API_KEY` from `.env`; do not ask the user to paste/export the key unless the file is missing, stale, or the script still reports a missing key.
+- When the user asks to commit repo changes, run a diff-scoped security review before committing, then run the relevant tests/checks and confirm the working tree is clean after the commit.
 - Treat this repo's local scripts and project-owned skills as the primary investment decision workflow. Use external plugins only as supplemental research, artifact, model, or QC layers unless the user explicitly asks for that plugin's workflow.
 - Public Equity Investing plugin scope:
   - Inline answer by default for ordinary buy/hold/trim/avoid, news, valuation, or portfolio questions in this repo. Use PEI HTML/XLSX artifacts only when the user asks for a formal artifact, model, tracker, pitch, scenario package, or QC pass.
