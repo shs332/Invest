@@ -14,6 +14,7 @@ __pycache__/
 .env
 .env.*
 .codex/
+.claude/
 
 # Test/build caches
 .pytest_cache/
@@ -41,3 +42,8 @@ companies/watchlist.yaml
 companies/thesis_tracker.yaml
 memos/*portfolio_context*.md
 !memos/portfolio_context.example.md
+
+# Personal investment memos and local behavioral docs; local-only from now on.
+memos/
+AGENTS.md
+CLAUDE.md
