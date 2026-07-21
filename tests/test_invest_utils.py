@@ -2,10 +2,24 @@ import os
 import tempfile
 import urllib.error
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
 from scripts.invest_utils import NetworkFetchError, http_json, load_project_env
+
+
+@contextmanager
+def _restoring_env(*keys):
+    previous = {key: os.environ.get(key) for key in keys}
+    try:
+        yield
+    finally:
+        for key, value in previous.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
 
 class InvestUtilsEnvTest(unittest.TestCase):
@@ -24,55 +38,35 @@ class InvestUtilsEnvTest(unittest.TestCase):
                 encoding="utf-8",
             )
             keys = ["PLAIN", "EXPORTED", "QUOTED", "COMMENTED"]
-            previous = {key: os.environ.get(key) for key in keys}
-            for key in keys:
-                os.environ.pop(key, None)
-            try:
+            with _restoring_env(*keys):
+                for key in keys:
+                    os.environ.pop(key, None)
                 loaded = load_project_env(env_path)
 
                 self.assertEqual(loaded["PLAIN"], "value")
                 self.assertEqual(os.environ["EXPORTED"], "from_export")
                 self.assertEqual(os.environ["QUOTED"], "quoted value")
                 self.assertEqual(os.environ["COMMENTED"], "kept")
-            finally:
-                for key, value in previous.items():
-                    if value is None:
-                        os.environ.pop(key, None)
-                    else:
-                        os.environ[key] = value
 
-    def test_existing_environment_wins_by_default(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            env_path = Path(tmp) / ".env"
-            env_path.write_text("KEEP_ME=from_file\n", encoding="utf-8")
-            previous = os.environ.get("KEEP_ME")
-            os.environ["KEEP_ME"] = "from_shell"
-            try:
-                loaded = load_project_env(env_path)
+    def test_shell_environment_wins_by_default_but_override_replaces_it(self):
+        with self.subTest("existing shell value wins by default"):
+            with tempfile.TemporaryDirectory() as tmp:
+                env_path = Path(tmp) / ".env"
+                env_path.write_text("KEEP_ME=from_file\n", encoding="utf-8")
+                with _restoring_env("KEEP_ME"):
+                    os.environ["KEEP_ME"] = "from_shell"
+                    loaded = load_project_env(env_path)
+                    self.assertEqual(loaded["KEEP_ME"], "from_file")
+                    self.assertEqual(os.environ["KEEP_ME"], "from_shell")
 
-                self.assertEqual(loaded["KEEP_ME"], "from_file")
-                self.assertEqual(os.environ["KEEP_ME"], "from_shell")
-            finally:
-                if previous is None:
-                    os.environ.pop("KEEP_ME", None)
-                else:
-                    os.environ["KEEP_ME"] = previous
-
-    def test_override_replaces_existing_environment(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            env_path = Path(tmp) / ".env"
-            env_path.write_text("REPLACE_ME=from_file\n", encoding="utf-8")
-            previous = os.environ.get("REPLACE_ME")
-            os.environ["REPLACE_ME"] = "from_shell"
-            try:
-                load_project_env(env_path, override=True)
-
-                self.assertEqual(os.environ["REPLACE_ME"], "from_file")
-            finally:
-                if previous is None:
-                    os.environ.pop("REPLACE_ME", None)
-                else:
-                    os.environ["REPLACE_ME"] = previous
+        with self.subTest("override=True replaces the shell value"):
+            with tempfile.TemporaryDirectory() as tmp:
+                env_path = Path(tmp) / ".env"
+                env_path.write_text("REPLACE_ME=from_file\n", encoding="utf-8")
+                with _restoring_env("REPLACE_ME"):
+                    os.environ["REPLACE_ME"] = "from_shell"
+                    load_project_env(env_path, override=True)
+                    self.assertEqual(os.environ["REPLACE_ME"], "from_file")
 
 
 class InvestUtilsNetworkTest(unittest.TestCase):

@@ -69,64 +69,57 @@ class NormalizeFinancialsTest(unittest.TestCase):
         self.assertEqual(result["periods"][0]["operating_income"], 200)
         self.assertEqual(result["periods"][0]["free_cash_flow"], 110)
 
-    def test_rejects_empty_dart_provider_response_by_default(self):
+    def test_normalize_dart_financials_guards_empty_provider_response(self):
         raw = {"status": "013", "message": "조회된 데이타가 없습니다."}
 
-        with self.assertRaises(RuntimeError) as context:
-            normalize_dart_financials(raw, "005930", market="KR")
-
-        message = str(context.exception)
-        self.assertIn("OpenDART returned unusable financial data", message)
-        self.assertIn("013", message)
-        self.assertIn("조회된 데이타가 없습니다.", message)
-
-    def test_allows_empty_dart_response_when_explicit(self):
-        raw = {"status": "013", "message": "조회된 데이타가 없습니다."}
-
-        result = normalize_dart_financials(raw, "005930", market="KR", allow_empty=True)
-
-        self.assertEqual(result["status"], "013")
-        self.assertEqual(result["periods"], [])
-
-    def test_fetch_dart_rejects_empty_provider_response_by_default(self):
-        raw = {"status": "013", "message": "조회된 데이타가 없습니다."}
-
-        with patch("scripts.fetch_dart_financials.http_json", return_value=raw):
+        with self.subTest("rejects by default"):
             with self.assertRaises(RuntimeError) as context:
-                fetch_dart_financials("00126380", 2026, "11013", api_key="test-key")
+                normalize_dart_financials(raw, "005930", market="KR")
+            message = str(context.exception)
+            self.assertIn("OpenDART returned unusable financial data", message)
+            self.assertIn("013", message)
+            self.assertIn("조회된 데이타가 없습니다.", message)
 
-        self.assertIn("OpenDART returned unusable financial data", str(context.exception))
+        with self.subTest("allows when explicit"):
+            result = normalize_dart_financials(raw, "005930", market="KR", allow_empty=True)
+            self.assertEqual(result["status"], "013")
+            self.assertEqual(result["periods"], [])
 
-    def test_fetch_dart_allows_empty_provider_response_when_explicit(self):
+    def test_fetch_dart_financials_guards_empty_response_and_loads_project_env(self):
         raw = {"status": "013", "message": "조회된 데이타가 없습니다."}
 
-        with patch("scripts.fetch_dart_financials.http_json", return_value=raw):
-            result = fetch_dart_financials("00126380", 2026, "11013", api_key="test-key", allow_empty=True)
+        with self.subTest("rejects by default"):
+            with patch("scripts.fetch_dart_financials.http_json", return_value=raw):
+                with self.assertRaises(RuntimeError) as context:
+                    fetch_dart_financials("00126380", 2026, "11013", api_key="test-key")
+            self.assertIn("OpenDART returned unusable financial data", str(context.exception))
 
-        self.assertEqual(result["status"], "013")
-        self.assertEqual(result["_fetch"]["corp_code"], "00126380")
+        with self.subTest("allows when explicit"):
+            with patch("scripts.fetch_dart_financials.http_json", return_value=raw):
+                result = fetch_dart_financials("00126380", 2026, "11013", api_key="test-key", allow_empty=True)
+            self.assertEqual(result["status"], "013")
+            self.assertEqual(result["_fetch"]["corp_code"], "00126380")
 
-    def test_fetch_dart_loads_project_env_when_called_as_function(self):
-        raw = {"status": "013", "message": "조회된 데이타가 없습니다."}
-        previous = os.environ.get("OPENDART_API_KEY")
-        os.environ.pop("OPENDART_API_KEY", None)
+        with self.subTest("loads project .env when no api_key is passed"):
+            previous = os.environ.get("OPENDART_API_KEY")
+            os.environ.pop("OPENDART_API_KEY", None)
 
-        def load_env() -> dict[str, str]:
-            os.environ["OPENDART_API_KEY"] = "from-env-file"
-            return {"OPENDART_API_KEY": "from-env-file"}
+            def load_env() -> dict[str, str]:
+                os.environ["OPENDART_API_KEY"] = "from-env-file"
+                return {"OPENDART_API_KEY": "from-env-file"}
 
-        try:
-            with patch("scripts.fetch_dart_financials.load_project_env", side_effect=load_env):
-                with patch("scripts.fetch_dart_financials.http_json", return_value=raw) as http_json:
-                    fetch_dart_financials("00126380", 2026, "11013", allow_empty=True)
-        finally:
-            if previous is None:
-                os.environ.pop("OPENDART_API_KEY", None)
-            else:
-                os.environ["OPENDART_API_KEY"] = previous
+            try:
+                with patch("scripts.fetch_dart_financials.load_project_env", side_effect=load_env):
+                    with patch("scripts.fetch_dart_financials.http_json", return_value=raw) as http_json:
+                        fetch_dart_financials("00126380", 2026, "11013", allow_empty=True)
+            finally:
+                if previous is None:
+                    os.environ.pop("OPENDART_API_KEY", None)
+                else:
+                    os.environ["OPENDART_API_KEY"] = previous
 
-        requested_url = http_json.call_args.args[0]
-        self.assertIn("crtfc_key=from-env-file", requested_url)
+            requested_url = http_json.call_args.args[0]
+            self.assertIn("crtfc_key=from-env-file", requested_url)
 
 
 if __name__ == "__main__":

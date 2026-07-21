@@ -87,52 +87,6 @@ holdings:
         self.assertTrue(result["flags"]["enabled"])
         self.assertEqual(result["holdings"], ["EXAMPLEUS", "EXAMPLEWATCH"])
 
-    def test_loads_portfolio_context_from_three_files(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            write_project_files(root)
-
-            context = load_portfolio_context(root)
-
-        self.assertEqual(context["profile"]["total_assets_krw"], 100000000)
-        self.assertEqual([holding["ticker"] for holding in context["holdings"]], ["EXAMPLEUS", "069500.KS"])
-        self.assertEqual(context["watchlist"][0]["ticker"], "EXAMPLEWATCH")
-
-    def test_context_pack_routes_holding_stock_question_with_portfolio_awareness(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            write_project_files(root)
-
-            pack = build_context_pack("EXAMPLEUS 더 살까?", root=root)
-
-        self.assertTrue(pack["portfolio_aware"])
-        self.assertEqual(pack["matched_security"]["ticker"], "EXAMPLEUS")
-        self.assertEqual(pack["route"]["primary_skill"], "us-stock-decision-workflow")
-        self.assertIn("scripts/update_asset_bundle.py EXAMPLEUS --market US --asset-type stock", pack["route"]["local_scripts"][0])
-        self.assertEqual(pack["public_equity_investing"]["role"], "supplemental")
-
-    def test_context_pack_routes_korean_return_seeking_us_stock_question(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            write_project_files(root)
-
-            pack = build_context_pack("EXAMPLEUS 수익률 위주로 공격적으로 볼 만해?", root=root)
-
-        self.assertTrue(pack["portfolio_aware"])
-        self.assertEqual(pack["matched_security"]["ticker"], "EXAMPLEUS")
-        self.assertEqual(pack["route"]["primary_skill"], "us-stock-return-opportunity")
-
-    def test_context_pack_routes_etf_and_price_move_questions(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            write_project_files(root)
-
-            etf_pack = build_context_pack("069500.KS 추가 매수?", root=root)
-            move_pack = build_context_pack("EXAMPLEUS 왜 올랐어?", root=root)
-
-        self.assertEqual(etf_pack["route"]["primary_skill"], "etf-analysis-review")
-        self.assertEqual(move_pack["route"]["primary_skill"], "market-move-explainer")
-
     def test_portfolio_snapshot_computes_values_weights_and_pnl(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -154,6 +108,44 @@ holdings:
         self.assertEqual(korea_etf["current_value_krw"], 330000)
         self.assertAlmostEqual(snapshot["known_positions_value_krw"], 655000)
         self.assertAlmostEqual(us_stock["known_positions_weight_pct"], 49.62)
+
+    def test_loads_portfolio_context_and_routes_context_pack_questions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_project_files(root)
+
+            with self.subTest("loads context from the three portfolio files"):
+                context = load_portfolio_context(root)
+                self.assertEqual(context["profile"]["total_assets_krw"], 100000000)
+                self.assertEqual(
+                    [holding["ticker"] for holding in context["holdings"]], ["EXAMPLEUS", "069500.KS"]
+                )
+                self.assertEqual(context["watchlist"][0]["ticker"], "EXAMPLEWATCH")
+
+            with self.subTest("routes a generic holding question to the decision workflow"):
+                pack = build_context_pack("EXAMPLEUS 더 살까?", root=root)
+                self.assertTrue(pack["portfolio_aware"])
+                self.assertEqual(pack["matched_security"]["ticker"], "EXAMPLEUS")
+                self.assertEqual(pack["route"]["primary_skill"], "us-stock-decision-workflow")
+                self.assertIn(
+                    "scripts/update_asset_bundle.py EXAMPLEUS --market US --asset-type stock",
+                    pack["route"]["local_scripts"][0],
+                )
+                self.assertEqual(pack["public_equity_investing"]["role"], "supplemental")
+
+            with self.subTest("routes an explicit return-seeking question to the return-opportunity skill"):
+                pack = build_context_pack("EXAMPLEUS 수익률 위주로 공격적으로 볼 만해?", root=root)
+                self.assertTrue(pack["portfolio_aware"])
+                self.assertEqual(pack["matched_security"]["ticker"], "EXAMPLEUS")
+                self.assertEqual(pack["route"]["primary_skill"], "us-stock-return-opportunity")
+
+            with self.subTest("routes an ETF question to etf-analysis-review"):
+                pack = build_context_pack("069500.KS 추가 매수?", root=root)
+                self.assertEqual(pack["route"]["primary_skill"], "etf-analysis-review")
+
+            with self.subTest("routes a price-move question to market-move-explainer"):
+                pack = build_context_pack("EXAMPLEUS 왜 올랐어?", root=root)
+                self.assertEqual(pack["route"]["primary_skill"], "market-move-explainer")
 
     def test_unified_asset_route_distinguishes_us_kr_and_etf(self):
         self.assertEqual(determine_asset_route("AAPL", "US", "stock")["pipeline"], "us_stock")
