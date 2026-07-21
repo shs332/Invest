@@ -117,15 +117,15 @@ Then check issuer/primary sources for holdings, index, expense ratio, AUM/liquid
 Canonical local check:
 
 ```bash
-.venv/bin/python -m unittest discover -s tests
+.venv/bin/pytest
 ```
 
 `uv` check when the runner can access its cache:
 
 ```bash
-uv run python -m unittest discover -s tests
+UV_CACHE_DIR=.uv-cache uv run pytest
 ```
 
-Do not use `uv run pytest` unless `pytest` is added as a declared dependency. Current tests are `unittest`-native.
+`pytest` is a declared dev dependency (`pyproject.toml` `[dependency-groups.dev]`); `uv sync` installs it. Test classes are still `unittest.TestCase`-based (pytest runs them natively) — write new tests either way, but run the suite with `pytest`, not `python -m unittest discover`.
 
 Network-fetch scripts can fail inside a sandbox before approval even when the script is correct. Re-run provider fetches with network approval or use existing cache artifacts under `data/cache/` when available.

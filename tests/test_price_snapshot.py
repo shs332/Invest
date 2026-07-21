@@ -1,211 +1,150 @@
 import unittest
+from unittest.mock import MagicMock
+
+import pandas as pd
 
 from scripts.fetch_price_snapshot import (
     fetch_price_snapshot,
-    summarize_nasdaq_quote,
-    summarize_stooq_quote_csv,
-    summarize_stooq_csv,
-    yahoo_symbol_to_stooq,
+    fetch_yfinance_price_snapshot,
+    summarize_yfinance_history,
+    _normalize_period,
 )
 
 
-class PriceSnapshotTest(unittest.TestCase):
-    def test_summarizes_stooq_csv(self):
-        csv_text = "\n".join(
-            [
-                "Date,Open,High,Low,Close,Volume",
-                "2026-01-02,100,101,99,100,1000",
-                "2026-01-03,105,106,104,110,1200",
-            ]
-        )
+def _fake_history(closes, volumes=None):
+    volumes = volumes or [1000] * len(closes)
+    return pd.DataFrame({"Close": closes, "Volume": volumes})
 
-        result = summarize_stooq_csv(csv_text, "AAPL")
+
+class SummarizeYfinanceHistoryTest(unittest.TestCase):
+    def test_summarizes_multi_row_history_as_history_available(self):
+        history = _fake_history([100.0, 105.0, 110.0], [1000, 1100, 1200])
+        fast_info = {"currency": "USD", "exchange": "NMS", "marketCap": 3_000_000_000_000}
+
+        result = summarize_yfinance_history(history, fast_info, "aapl")
 
         self.assertEqual(result["symbol"], "AAPL")
-        self.assertEqual(result["source"], "stooq_csv")
+        self.assertEqual(result["source"], "yfinance")
+        self.assertEqual(result["currency"], "USD")
         self.assertEqual(result["latest_close"], 110.0)
         self.assertEqual(result["period_return_pct"], 10.0)
         self.assertEqual(result["max_close"], 110.0)
         self.assertEqual(result["min_close"], 100.0)
         self.assertEqual(result["latest_volume"], 1200)
-        self.assertEqual(result["points"], 2)
+        self.assertEqual(result["points"], 3)
         self.assertTrue(result["history_available"])
-        self.assertEqual(result["history_points"], 2)
+        self.assertEqual(result["market_cap"], 3_000_000_000_000)
 
-    def test_summarizes_stooq_quote_csv(self):
-        csv_text = "\n".join(
-            [
-                "Symbol,Date,Time,Open,High,Low,Close,Volume",
-                "AAPL.US,2026-05-11,22:00:19,291.979,293.88,290.23,292.68,41166897",
-            ]
-        )
+    def test_single_row_history_is_not_history_available(self):
+        history = _fake_history([292.68], [41166897])
 
-        result = summarize_stooq_quote_csv(csv_text, "AAPL")
+        result = summarize_yfinance_history(history, {}, "AAPL")
 
-        self.assertEqual(result["source"], "stooq_quote_csv")
-        self.assertEqual(result["regular_market_price"], 292.68)
-        self.assertEqual(result["latest_close"], 292.68)
-        self.assertEqual(result["latest_volume"], 41166897)
         self.assertEqual(result["points"], 1)
         self.assertFalse(result["history_available"])
-        self.assertEqual(result["history_points"], 1)
 
-    def test_stooq_quote_nd_close_is_clean_missing_price_error(self):
-        csv_text = "\n".join(
-            [
-                "Symbol,Date,Time,Open,High,Low,Close,Volume",
-                "005930.KS,N/D,N/D,N/D,N/D,N/D,N/D,N/D",
-            ]
+    def test_empty_history_raises_runtime_error(self):
+        with self.assertRaises(RuntimeError):
+            summarize_yfinance_history(pd.DataFrame({"Close": [], "Volume": []}), {}, "AAPL")
+
+    def test_none_history_raises_runtime_error(self):
+        with self.assertRaises(RuntimeError):
+            summarize_yfinance_history(None, {}, "AAPL")
+
+
+class NormalizePeriodTest(unittest.TestCase):
+    def test_empty_and_quote_like_values_map_to_a_short_window(self):
+        for value in ("", "latest", "quote"):
+            self.assertEqual(_normalize_period(value), "5d")
+
+    def test_real_periods_pass_through_lowercased(self):
+        self.assertEqual(_normalize_period("1Y"), "1y")
+        self.assertEqual(_normalize_period("6mo"), "6mo")
+
+
+class FetchYfinancePriceSnapshotTest(unittest.TestCase):
+    def _make_ticker_factory(self, history, fast_info=None, raise_on_call=None):
+        def factory(symbol):
+            if raise_on_call is not None:
+                raise raise_on_call
+            ticker = MagicMock()
+            ticker.history.return_value = history
+            ticker.fast_info = fast_info or {}
+            return ticker
+
+        return factory
+
+    def test_returns_summary_and_fetch_metadata_on_success(self):
+        history = _fake_history([244000.0, 259000.0], [26804038, 22263917])
+        factory = self._make_ticker_factory(history, {"currency": "KRW", "exchange": "KSC"})
+
+        result = fetch_yfinance_price_snapshot("005930.KS", "1mo", "1d", ticker_factory=factory)
+
+        self.assertEqual(result["summary"]["source"], "yfinance")
+        self.assertEqual(result["summary"]["currency"], "KRW")
+        self.assertEqual(result["_fetch"]["provider"], "yfinance")
+        self.assertEqual(result["_fetch"]["period_used"], "1mo")
+        self.assertEqual(result["_fetch"]["attempts"], 1)
+
+    def test_retries_on_transient_failure_then_succeeds(self):
+        calls = []
+        history = _fake_history([100.0, 101.0])
+
+        def flaky_factory(symbol):
+            calls.append(symbol)
+            if len(calls) < 3:
+                raise RuntimeError("YFRateLimitError: Too Many Requests")
+            ticker = MagicMock()
+            ticker.history.return_value = history
+            ticker.fast_info = {}
+            return ticker
+
+        sleeps = []
+        result = fetch_yfinance_price_snapshot(
+            "MSFT", "1y", "1d", sleep=lambda seconds: sleeps.append(seconds), ticker_factory=flaky_factory
         )
+
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(len(sleeps), 2)
+        self.assertEqual(result["_fetch"]["attempts"], 3)
+
+    def test_gives_up_after_max_retries_and_raises_runtime_error(self):
+        def always_fails(symbol):
+            raise RuntimeError("boom")
 
         with self.assertRaises(RuntimeError) as context:
-            summarize_stooq_quote_csv(csv_text, "005930.KS")
+            fetch_yfinance_price_snapshot(
+                "MSFT", "1y", "1d", sleep=lambda seconds: None, ticker_factory=always_fails
+            )
 
-        self.assertIn("stooq quote returned no close price", str(context.exception))
+        self.assertIn("yfinance fetch failed", str(context.exception))
 
-    def test_summarizes_nasdaq_quote(self):
-        raw = {
-            "data": {
-                "symbol": "AAPL",
-                "primaryData": {
-                    "lastSalePrice": "$292.68",
-                    "volume": "42,247,485",
-                    "lastTradeTimestamp": "May 11, 2026",
-                },
-                "keyStats": {"fiftyTwoWeekHighLow": {"value": "193.46 - 294.76"}},
-            }
-        }
 
-        result = summarize_nasdaq_quote(raw, "AAPL")
-
-        self.assertEqual(result["source"], "nasdaq_quote")
-        self.assertEqual(result["regular_market_price"], 292.68)
-        self.assertEqual(result["latest_close"], 292.68)
-        self.assertEqual(result["latest_volume"], 42247485)
-        self.assertEqual(result["min_close"], 193.46)
-        self.assertEqual(result["max_close"], 294.76)
-        self.assertFalse(result["history_available"])
-        self.assertEqual(result["history_points"], 1)
-
-    def test_uses_stooq_before_yahoo(self):
+class FetchPriceSnapshotProviderChainTest(unittest.TestCase):
+    def test_default_provider_is_yfinance(self):
         calls = []
 
-        def fake_stooq(symbol, range_, interval):
-            calls.append("stooq")
-            return {"summary": {"source": "stooq_csv", "history_available": True, "history_points": 252}, "raw": "csv"}
+        def fake_yfinance(symbol, range_, interval):
+            calls.append(symbol)
+            return {"summary": {"source": "yfinance"}, "_fetch": {}}
 
-        def fake_nasdaq(symbol, range_, interval):
-            calls.append("nasdaq")
-            return {"summary": {"source": "nasdaq_quote"}, "raw": {}}
+        result = fetch_price_snapshot("AAPL", yfinance_fetcher=fake_yfinance)
 
-        def fake_yahoo(symbol, range_, interval):
-            calls.append("yahoo")
-            return {"summary": {"source": "yahoo_chart"}, "raw": {}}
+        self.assertEqual(result["summary"]["source"], "yfinance")
+        self.assertEqual(calls, ["AAPL"])
 
-        result = fetch_price_snapshot("AAPL", stooq_fetcher=fake_stooq, nasdaq_fetcher=fake_nasdaq, yahoo_fetcher=fake_yahoo)
+    def test_unknown_provider_name_raises_value_error(self):
+        with self.assertRaises(ValueError):
+            fetch_price_snapshot("AAPL", providers=["not-a-real-provider"])
 
-        self.assertEqual(result["summary"]["source"], "stooq_csv")
-        self.assertEqual(calls, ["stooq"])
+    def test_all_providers_failing_raises_runtime_error_with_attempts(self):
+        def failing_yfinance(symbol, range_, interval):
+            raise RuntimeError("yfinance fetch failed for AAPL after 3 attempts: boom")
 
-    def test_falls_back_to_nasdaq_when_stooq_fails(self):
-        calls = []
+        with self.assertRaises(RuntimeError) as context:
+            fetch_price_snapshot("AAPL", yfinance_fetcher=failing_yfinance)
 
-        def fake_stooq(symbol, range_, interval):
-            calls.append("stooq")
-            raise RuntimeError("stooq unavailable")
-
-        def fake_nasdaq(symbol, range_, interval):
-            calls.append("nasdaq")
-            return {"summary": {"source": "nasdaq_quote"}, "raw": {}}
-
-        def fake_yahoo(symbol, range_, interval):
-            calls.append("yahoo")
-            return {"summary": {"source": "yahoo_chart"}, "raw": {}}
-
-        result = fetch_price_snapshot("AAPL", "quote", "1d", stooq_fetcher=fake_stooq, nasdaq_fetcher=fake_nasdaq, yahoo_fetcher=fake_yahoo)
-
-        self.assertEqual(result["summary"]["source"], "nasdaq_quote")
-        self.assertEqual(calls, ["stooq", "nasdaq"])
-        self.assertEqual(result["_fetch"]["attempts"][0]["provider"], "stooq")
-        self.assertIn("stooq unavailable", result["_fetch"]["attempts"][0]["error"])
-
-    def test_skips_nasdaq_for_non_us_dotted_symbol(self):
-        calls = []
-
-        def fake_stooq(symbol, range_, interval):
-            calls.append("stooq")
-            raise RuntimeError("stooq quote returned no close price")
-
-        def fake_nasdaq(symbol, range_, interval):
-            calls.append("nasdaq")
-            raise AssertionError("nasdaq should be skipped for dotted non-US symbols")
-
-        def fake_yahoo(symbol, range_, interval):
-            calls.append("yahoo")
-            return {"summary": {"source": "yahoo_chart", "history_available": True, "history_points": 252}, "raw": {}}
-
-        result = fetch_price_snapshot("005930.KS", stooq_fetcher=fake_stooq, nasdaq_fetcher=fake_nasdaq, yahoo_fetcher=fake_yahoo)
-
-        self.assertEqual(result["summary"]["source"], "yahoo_chart")
-        self.assertEqual(calls, ["stooq", "yahoo"])
-        self.assertEqual(result["_fetch"]["attempts"][1]["provider"], "nasdaq")
-        self.assertEqual(result["_fetch"]["attempts"][1]["status"], "skipped")
-        self.assertIn("plain US tickers", result["_fetch"]["attempts"][1]["reason"])
-
-    def test_range_request_skips_quote_only_provider_when_history_required(self):
-        calls = []
-
-        def fake_stooq(symbol, range_, interval):
-            calls.append("stooq")
-            return {
-                "summary": {
-                    "source": "stooq_quote_csv",
-                    "history_available": False,
-                    "history_points": 1,
-                },
-                "raw": "csv",
-            }
-
-        def fake_nasdaq(symbol, range_, interval):
-            calls.append("nasdaq")
-            return {
-                "summary": {
-                    "source": "nasdaq_quote",
-                    "history_available": False,
-                    "history_points": 1,
-                },
-                "raw": {},
-            }
-
-        def fake_yahoo(symbol, range_, interval):
-            calls.append("yahoo")
-            return {
-                "summary": {
-                    "source": "yahoo_chart",
-                    "history_available": True,
-                    "history_points": 252,
-                },
-                "raw": {},
-            }
-
-        result = fetch_price_snapshot(
-            "AAPL",
-            "1y",
-            "1d",
-            stooq_fetcher=fake_stooq,
-            nasdaq_fetcher=fake_nasdaq,
-            yahoo_fetcher=fake_yahoo,
-        )
-
-        self.assertEqual(result["summary"]["source"], "yahoo_chart")
-        self.assertEqual(calls, ["stooq", "nasdaq", "yahoo"])
-        self.assertEqual(result["_fetch"]["attempts"][0]["status"], "quote_only")
-        self.assertEqual(result["_fetch"]["attempts"][1]["status"], "quote_only")
-
-    def test_maps_plain_us_symbol_to_stooq_us_suffix(self):
-        self.assertEqual(yahoo_symbol_to_stooq("AAPL"), "aapl.us")
-        self.assertEqual(yahoo_symbol_to_stooq("BRK-B"), "brk-b.us")
-        self.assertEqual(yahoo_symbol_to_stooq("005930.KS"), "005930.ks")
+        self.assertIn("all price providers failed", str(context.exception))
 
 
 if __name__ == "__main__":

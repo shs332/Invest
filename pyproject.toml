@@ -6,8 +6,18 @@ requires-python = ">=3.9"
 dependencies = [
     "openpyxl>=3.1.5",
     "xlsxwriter>=3.2.9",
+    "yfinance>=0.2.65",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
 ]
 
 [tool.uv]
 package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
 

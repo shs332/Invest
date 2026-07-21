@@ -1,69 +1,60 @@
 from __future__ import annotations
 
 import argparse
-import csv
-from io import StringIO
-import urllib.parse
 from pathlib import Path
 
 try:
-    from scripts.invest_utils import http_bytes, http_json, now_kst_date, pct_change, safe_symbol, write_json
+    from scripts.invest_utils import now_kst_date, pct_change, safe_symbol, write_json
 except ModuleNotFoundError:
-    from invest_utils import http_bytes, http_json, now_kst_date, pct_change, safe_symbol, write_json
+    from invest_utils import now_kst_date, pct_change, safe_symbol, write_json
 
 
-YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
-STOOQ_QUOTE_URL = "https://stooq.com/q/l/"
-NASDAQ_QUOTE_URL = "https://api.nasdaq.com/api/quote/{symbol}/info?assetclass=stocks"
-NASDAQ_HEADERS = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
-
-
-def yahoo_symbol_to_stooq(symbol: str) -> str:
-    normalized = symbol.strip().lower()
-    if "." in normalized:
-        return normalized
-    return f"{normalized}.us"
+# Historical note (2026-07-21): this module used to scrape stooq, nasdaq, and yahoo
+# directly via urllib with a provider-fallback chain. All three had real problems:
+# stooq's quote endpoint (/q/l/) is deprecated (404) and its historical endpoint is
+# gated behind a JS proof-of-work bot check no plain HTTP client can pass; nasdaq's
+# endpoint only ever returns a single quote point, so it could never satisfy a
+# history-requiring range; yahoo's raw chart endpoint intermittently 429s in a way
+# that survived matching curl's headers exactly, consistent with TLS/HTTP client
+# fingerprinting rather than a fixable header issue. yfinance (which wraps the same
+# Yahoo data via curl_cffi, maintained against Yahoo's anti-bot changes by its
+# community) replaced all three as the sole provider. Free API-key alternatives were
+# evaluated and rejected: Alpha Vantage free tier is 25 requests/day, Twelve Data
+# gates Korea Exchange (KRX) behind its paid Pro plan (this repo holds KRX tickers),
+# and Finnhub's free tier returns 403 on historical candles entirely.
+YFINANCE_MAX_RETRIES = 3
+YFINANCE_RETRY_BACKOFF_SECONDS = 1.5
 
 
 def _parse_number(value) -> float | None:
     if value is None:
         return None
-    cleaned = str(value).replace("$", "").replace(",", "").replace("%", "").strip()
-    if not cleaned or cleaned.upper() in {"N/A", "NA", "N/D", "ND", "-"}:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
         return None
-    return float(cleaned)
+    if number != number:  # NaN check without importing math
+        return None
+    return number
 
 
-def _parse_int(value) -> int | None:
-    number = _parse_number(value)
-    return int(number) if number is not None else None
+def summarize_yfinance_history(history, fast_info: dict, symbol: str) -> dict:
+    if history is None or history.empty:
+        raise RuntimeError(f"yfinance returned no price rows for {symbol}")
 
-
-def summarize_stooq_csv(csv_text: str, symbol: str) -> dict:
-    rows = list(csv.DictReader(StringIO(csv_text)))
-    if not rows or "Close" not in rows[0]:
-        raise RuntimeError("stooq returned no price rows")
-
-    closes = []
-    volumes = []
-    for row in rows:
-        close = _parse_number(row.get("Close"))
-        volume = _parse_int(row.get("Volume"))
-        if close is not None:
-            closes.append(close)
-        if volume is not None:
-            volumes.append(volume)
+    closes = [value for value in history["Close"].tolist() if value == value]  # drop NaN
+    volumes = [int(value) for value in history.get("Volume", []).tolist() if value == value]
     if not closes:
-        raise RuntimeError("stooq returned no close prices")
+        raise RuntimeError(f"yfinance returned no usable close prices for {symbol}")
 
     latest = closes[-1]
     first = closes[0]
     return {
         "symbol": symbol.upper(),
-        "source": "stooq_csv",
-        "currency": None,
-        "exchange": "stooq",
-        "regular_market_price": latest,
+        "source": "yfinance",
+        "currency": fast_info.get("currency"),
+        "exchange": fast_info.get("exchange"),
+        "regular_market_price": _parse_number(fast_info.get("lastPrice")) or latest,
         "latest_close": latest,
         "period_return_pct": pct_change(first, latest),
         "max_close": max(closes),
@@ -72,135 +63,59 @@ def summarize_stooq_csv(csv_text: str, symbol: str) -> dict:
         "points": len(closes),
         "history_available": len(closes) > 1,
         "history_points": len(closes),
+        "market_cap": _parse_number(fast_info.get("marketCap")),
+        "year_high": _parse_number(fast_info.get("yearHigh")),
+        "year_low": _parse_number(fast_info.get("yearLow")),
     }
 
 
-def summarize_stooq_quote_csv(csv_text: str, symbol: str) -> dict:
-    rows = list(csv.DictReader(StringIO(csv_text)))
-    if not rows or "Close" not in rows[0]:
-        raise RuntimeError("stooq quote returned no price rows")
-    row = rows[0]
-    latest = _parse_number(row.get("Close"))
-    if latest is None:
-        raise RuntimeError("stooq quote returned no close price")
-    return {
-        "symbol": symbol.upper(),
-        "source": "stooq_quote_csv",
-        "currency": None,
-        "exchange": "stooq",
-        "regular_market_price": latest,
-        "latest_close": latest,
-        "period_return_pct": None,
-        "max_close": _parse_number(row.get("High")),
-        "min_close": _parse_number(row.get("Low")),
-        "latest_volume": _parse_int(row.get("Volume")),
-        "points": 1,
-        "history_available": False,
-        "history_points": 1,
-    }
-
-
-def summarize_nasdaq_quote(raw: dict, symbol: str) -> dict:
-    data = raw.get("data") or {}
-    primary = data.get("primaryData") or {}
-    latest = _parse_number(primary.get("lastSalePrice"))
-    if latest is None:
-        raise RuntimeError("nasdaq returned no last sale price")
-    range_text = ((data.get("keyStats") or {}).get("fiftyTwoWeekHighLow") or {}).get("value")
-    low = high = None
-    if isinstance(range_text, str) and " - " in range_text:
-        low_text, high_text = range_text.split(" - ", 1)
-        low = _parse_number(low_text)
-        high = _parse_number(high_text)
-    return {
-        "symbol": symbol.upper(),
-        "source": "nasdaq_quote",
-        "currency": None,
-        "exchange": data.get("exchange"),
-        "regular_market_price": latest,
-        "latest_close": latest,
-        "period_return_pct": None,
-        "max_close": high,
-        "min_close": low,
-        "latest_volume": _parse_int(primary.get("volume")),
-        "points": 1,
-        "history_available": False,
-        "history_points": 1,
-    }
-
-
-def summarize_yahoo_chart(raw: dict, symbol: str) -> dict:
-    result = raw.get("chart", {}).get("result", [{}])[0]
-    meta = result.get("meta", {})
-    quote = result.get("indicators", {}).get("quote", [{}])[0]
-    closes = [value for value in quote.get("close", []) if value is not None]
-    volumes = [value for value in quote.get("volume", []) if value is not None]
-    latest = closes[-1] if closes else None
-    first = closes[0] if closes else None
-    return {
-        "symbol": symbol.upper(),
-        "source": "yahoo_chart",
-        "currency": meta.get("currency"),
-        "exchange": meta.get("exchangeName"),
-        "regular_market_price": meta.get("regularMarketPrice"),
-        "latest_close": latest,
-        "period_return_pct": pct_change(first, latest),
-        "max_close": max(closes) if closes else None,
-        "min_close": min(closes) if closes else None,
-        "latest_volume": volumes[-1] if volumes else None,
-        "points": len(closes),
-        "history_available": len(closes) > 1,
-        "history_points": len(closes),
-    }
-
-
-def fetch_yahoo_price_snapshot(symbol: str, range_: str = "1y", interval: str = "1d") -> dict:
-    encoded = urllib.parse.quote(symbol, safe="")
-    url = f"{YAHOO_CHART_URL.format(symbol=encoded)}?range={range_}&interval={interval}"
-    raw = http_json(url)
-    return {
-        "_fetch": {"provider": "yahoo", "source_url": url, "symbol": symbol, "range": range_, "interval": interval},
-        "summary": summarize_yahoo_chart(raw, symbol),
-        "raw": raw,
-    }
-
-
-def fetch_stooq_price_snapshot(symbol: str, range_: str = "1y", interval: str = "1d") -> dict:
-    if interval != "1d":
-        raise RuntimeError("stooq provider supports interval=1d only")
-    stooq_symbol = yahoo_symbol_to_stooq(symbol)
-    params = {"s": stooq_symbol, "f": "sd2t2ohlcv", "h": "", "e": "csv"}
-    url = f"{STOOQ_QUOTE_URL}?{urllib.parse.urlencode(params)}"
-    csv_text = http_bytes(url).decode("utf-8")
-    return {
-        "_fetch": {
-            "provider": "stooq",
-            "source_url": url,
-            "symbol": symbol,
-            "stooq_symbol": stooq_symbol,
-            "range": range_,
-            "interval": interval,
-        },
-        "summary": summarize_stooq_quote_csv(csv_text, symbol),
-        "raw": csv_text,
-    }
-
-
-def fetch_nasdaq_price_snapshot(symbol: str, range_: str = "1y", interval: str = "1d") -> dict:
-    if "." in symbol or symbol.strip().isdigit():
-        raise RuntimeError("nasdaq provider supports plain US tickers only")
-    url = NASDAQ_QUOTE_URL.format(symbol=urllib.parse.quote(symbol.upper(), safe=""))
-    raw = http_json(url, headers=NASDAQ_HEADERS)
-    return {
-        "_fetch": {"provider": "nasdaq", "source_url": url, "symbol": symbol, "range": range_, "interval": interval},
-        "summary": summarize_nasdaq_quote(raw, symbol),
-        "raw": raw,
-    }
-
-
-def requires_history(range_: str) -> bool:
+def _normalize_period(range_: str) -> str:
     normalized = range_.strip().lower()
-    return normalized not in {"", "latest", "quote", "1d"}
+    if normalized in {"", "latest", "quote"}:
+        return "5d"  # yfinance has no true single-quote period; shortest usable window
+    return normalized
+
+
+def fetch_yfinance_price_snapshot(
+    symbol: str, range_: str = "1y", interval: str = "1d", sleep=None, ticker_factory=None
+) -> dict:
+    import time as _time
+
+    try:
+        import yfinance as yf
+    except ImportError as exc:
+        raise RuntimeError(
+            "yfinance is not installed. Run `uv sync` (or `pip install yfinance`) to install it."
+        ) from exc
+
+    sleep = sleep or _time.sleep
+    period = _normalize_period(range_)
+    make_ticker = ticker_factory or yf.Ticker
+
+    last_error: Exception | None = None
+    for attempt in range(YFINANCE_MAX_RETRIES):
+        try:
+            ticker = make_ticker(symbol)
+            history = ticker.history(period=period, interval=interval)
+            fast_info = dict(ticker.fast_info) if history is not None and not history.empty else {}
+            summary = summarize_yfinance_history(history, fast_info, symbol)
+            return {
+                "_fetch": {
+                    "provider": "yfinance",
+                    "symbol": symbol,
+                    "range": range_,
+                    "period_used": period,
+                    "interval": interval,
+                    "attempts": attempt + 1,
+                },
+                "summary": summary,
+            }
+        except Exception as exc:  # yfinance raises varied exception types (requests, curl_cffi, etc.)
+            last_error = exc
+            if attempt == YFINANCE_MAX_RETRIES - 1:
+                break
+            sleep(YFINANCE_RETRY_BACKOFF_SECONDS * (attempt + 1))
+    raise RuntimeError(f"yfinance fetch failed for {symbol} after {YFINANCE_MAX_RETRIES} attempts: {last_error}")
 
 
 def fetch_price_snapshot(
@@ -208,36 +123,19 @@ def fetch_price_snapshot(
     range_: str = "1y",
     interval: str = "1d",
     providers: list[str] | None = None,
-    stooq_fetcher=fetch_stooq_price_snapshot,
-    nasdaq_fetcher=fetch_nasdaq_price_snapshot,
-    yahoo_fetcher=fetch_yahoo_price_snapshot,
+    yfinance_fetcher=fetch_yfinance_price_snapshot,
 ) -> dict:
-    selected = providers or ["stooq", "nasdaq", "yahoo"]
+    selected = providers or ["yfinance"]
     attempts = []
-    fetchers = {"stooq": stooq_fetcher, "nasdaq": nasdaq_fetcher, "yahoo": yahoo_fetcher}
+    fetchers = {"yfinance": yfinance_fetcher}
     for provider in selected:
         fetcher = fetchers.get(provider)
         if fetcher is None:
             raise ValueError(f"unknown price provider: {provider}")
-        if provider == "nasdaq" and ("." in symbol or symbol.strip().isdigit()):
-            attempts.append({
-                "provider": provider,
-                "status": "skipped",
-                "reason": "nasdaq provider supports plain US tickers only",
-            })
-            continue
         try:
             data = fetcher(symbol, range_, interval)
         except Exception as exc:
             attempts.append({"provider": provider, "error": str(exc)})
-            continue
-        summary = data.get("summary", {})
-        if requires_history(range_) and not summary.get("history_available"):
-            attempts.append({
-                "provider": provider,
-                "status": "quote_only",
-                "reason": f"range={range_} requires history but provider returned {summary.get('history_points', 0)} point(s)",
-            })
             continue
         data.setdefault("_fetch", {})
         data["_fetch"]["attempts"] = attempts + [{"provider": provider, "status": "ok"}]
@@ -246,11 +144,11 @@ def fetch_price_snapshot(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Fetch a price snapshot with provider fallback.")
+    parser = argparse.ArgumentParser(description="Fetch a price snapshot (yfinance-backed).")
     parser.add_argument("symbol", help="Ticker symbol, e.g. AAPL or 005930.KS.")
     parser.add_argument("--range", default="1y")
     parser.add_argument("--interval", default="1d")
-    parser.add_argument("--providers", default="stooq,nasdaq,yahoo", help="Comma-separated provider order: stooq,nasdaq,yahoo")
+    parser.add_argument("--providers", default="yfinance", help="Comma-separated provider order (currently: yfinance)")
     parser.add_argument("--out-dir", default="data/raw/prices")
     args = parser.parse_args()
     providers = [provider.strip() for provider in args.providers.split(",") if provider.strip()]

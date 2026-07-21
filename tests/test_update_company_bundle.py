@@ -211,6 +211,54 @@ class BuildBundleExplicitInputTest(unittest.TestCase):
         self.assertIn("- valuation ratios require external/primary market-cap or enterprise-value source", text)
         self.assertIn("- price history is quote-only; range return/drawdown needs history-capable provider", text)
 
+    def test_build_bundle_computes_valuation_slots_when_market_cap_is_available(self):
+        from scripts.build_analysis_bundle import build_bundle
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "reports"
+            with unittest.mock.patch("scripts.build_analysis_bundle.now_kst_iso", return_value="2026-07-21T10:00:00+09:00"):
+                with unittest.mock.patch("scripts.build_analysis_bundle.read_json") as read_json_mock:
+                    read_json_mock.side_effect = [
+                        {
+                            "ticker": "MSFT",
+                            "market": "US",
+                            "source": "sec_companyfacts",
+                            "cik": "0000789019",
+                            "periods": [
+                                {"year": 2025, "net_income": 101832000000, "free_cash_flow": 71611000000}
+                            ],
+                        },
+                        {
+                            "_fetch": {"provider": "yfinance"},
+                            "summary": {
+                                "latest_close": 398.45,
+                                "history_available": True,
+                                "history_points": 252,
+                                "market_cap": 2959859898487.93,
+                            },
+                        },
+                    ]
+                    output = build_bundle(
+                        "MSFT",
+                        output_dir=output_dir,
+                        financials_path="explicit_financials.json",
+                        price_path="explicit_price.json",
+                    )
+
+            text = output.read_text(encoding="utf-8")
+
+        self.assertIn("- market_cap: 2959859898487.93", text)
+        self.assertIn("- trailing_pe: 29.07", text)
+        self.assertIn("- fcf_yield: 2.42%", text)
+        self.assertIn(
+            "- enterprise_value, forward_pe, and ev_to_ebitda still require a debt/forward-estimate "
+            "source beyond market_cap",
+            text,
+        )
+        self.assertNotIn(
+            "- valuation ratios require external/primary market-cap or enterprise-value source", text
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

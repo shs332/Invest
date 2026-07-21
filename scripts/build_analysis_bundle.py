@@ -39,29 +39,47 @@ def _format_filing_sources(financials: dict, price_data: dict | None) -> list[st
     return lines
 
 
-def _format_valuation_slots() -> list[str]:
+def _format_valuation_slots(financials: dict, price_data: dict | None) -> list[str]:
+    summary = price_data.get("summary", {}) if price_data else {}
+    market_cap = summary.get("market_cap")
+    periods = financials.get("periods", [])
+    latest_period = periods[0] if periods else {}
+    net_income = latest_period.get("net_income")
+    free_cash_flow = latest_period.get("free_cash_flow")
+
+    trailing_pe = "missing"
+    if market_cap and net_income and net_income > 0:
+        trailing_pe = round(market_cap / net_income, 2)
+
+    fcf_yield = "missing"
+    if market_cap and free_cash_flow is not None:
+        fcf_yield = f"{round(free_cash_flow / market_cap * 100, 2)}%"
+
     return [
         "## Valuation Slots",
         "",
-        "- market_cap: missing",
+        f"- market_cap: {market_cap if market_cap is not None else 'missing'}",
         "- enterprise_value: missing",
-        "- trailing_pe: missing",
+        f"- trailing_pe: {trailing_pe}",
         "- forward_pe: missing",
         "- ev_to_ebitda: missing",
-        "- fcf_yield: missing",
+        f"- fcf_yield: {fcf_yield}",
         "- peer_set: missing",
         "",
     ]
 
 
 def _format_source_gaps(price_data: dict | None) -> list[str]:
-    gaps = [
-        "## Source Gaps",
-        "",
-        "- valuation ratios require external/primary market-cap or enterprise-value source",
-        "- peer comparison requires explicitly selected comparable companies",
-    ]
+    gaps = ["## Source Gaps", ""]
     summary = price_data.get("summary", {}) if price_data else {}
+    if not summary.get("market_cap"):
+        gaps.append("- valuation ratios require external/primary market-cap or enterprise-value source")
+    else:
+        gaps.append(
+            "- enterprise_value, forward_pe, and ev_to_ebitda still require a debt/forward-estimate "
+            "source beyond market_cap"
+        )
+    gaps.append("- peer comparison requires explicitly selected comparable companies")
     if price_data is None:
         gaps.append("- price source is missing")
     elif not summary.get("history_available"):
@@ -112,7 +130,7 @@ def build_bundle(
             lines.append(f"- {key}: {value}")
         lines.append("")
     lines.extend(_format_filing_sources(financials, price_data))
-    lines.extend(_format_valuation_slots())
+    lines.extend(_format_valuation_slots(financials, price_data))
     lines.extend(_format_source_gaps(price_data))
     lines.extend(
         [
